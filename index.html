@@ -15,8 +15,8 @@
   --blue: #5bb8f5;
   --blue-ring: #a8d8f8;
   --blue-dark: #1a7abf;
-  --text: #1a1a2e;
-  --text-sub: #6b7280;
+  --green: #22c55e;
+  --red: #ef4444;
   --bottom-h: 160px;
 }
 
@@ -98,11 +98,11 @@ html, body {
   backdrop-filter: blur(6px);
 }
 .cam-on .pinch-hint { display: block; animation: fadeHint 3s forwards 2.5s; }
-@keyframes fadeHint { to { opacity: 0; pointer-events: none; } }
+@keyframes fadeHint { to { opacity: 0; } }
 
 canvas { display: none; }
 
-/* ══ BOTTOM PANEL ══ */
+/* ══ BOTTOM ══ */
 .bottom {
   height: var(--bottom-h);
   background: var(--white);
@@ -113,10 +113,8 @@ canvas { display: none; }
   justify-content: space-evenly;
   padding: 10px 20px 14px;
   flex-shrink: 0;
-  gap: 0;
 }
 
-/* Row 1 — capture button centered */
 .row-capture {
   display: flex;
   align-items: center;
@@ -143,7 +141,6 @@ canvas { display: none; }
 }
 .capture-btn:active .capture-inner { background: #3aa0e0; }
 
-/* Row 2 — LEDs + BLE button */
 .row-controls {
   display: flex;
   align-items: center;
@@ -169,29 +166,25 @@ canvas { display: none; }
   transition: border-color 0.2s, background 0.2s;
 }
 .led-card:active { opacity: 0.75; }
-.led-card.on {
-  border-color: var(--blue);
-  background: rgba(91,184,245,0.07);
-}
+.led-card.on { border-color: var(--blue); background: rgba(91,184,245,0.07); }
 
-/* Blue circle indicator (from Figma) */
 .led-indicator {
   width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--gray);
   transition: background 0.2s;
-  flex-shrink: 0;
 }
-.led-card.on .led-indicator { background: var(--blue); box-shadow: 0 0 8px rgba(91,184,245,0.5); }
+.led-card.on .led-indicator {
+  background: var(--blue);
+  box-shadow: 0 0 8px rgba(91,184,245,0.5);
+}
 
-/* Toggle */
 .toggle {
   width: 46px; height: 26px;
   background: var(--gray);
   border-radius: 13px;
   position: relative;
   transition: background 0.22s;
-  flex-shrink: 0;
 }
 .toggle::after {
   content: '';
@@ -206,21 +199,20 @@ canvas { display: none; }
 .led-card.on .toggle { background: var(--blue); }
 .led-card.on .toggle::after { transform: translateX(20px); }
 
-/* BLE button (small, right side — like the small gray rect in Figma) */
 .ble-btn {
   width: 42px; height: 72px;
   background: var(--gray);
-  border: none; border-radius: 10px;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 5px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 .ble-btn:active { opacity: 0.7; }
-.ble-btn.on { background: rgba(91,184,245,0.2); border: 1.5px solid var(--blue); }
-.ble-btn svg { flex-shrink: 0; }
+.ble-btn.on { background: rgba(91,184,245,0.15); border-color: var(--blue); }
 .ble-btn span {
   font-size: 9px; font-weight: 700;
   color: #555;
@@ -236,41 +228,72 @@ canvas { display: none; }
   background: rgba(0,0,0,0.92);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 16px; padding: 24px 20px;
+  gap: 14px; padding: 24px 20px;
   opacity: 0; pointer-events: none;
   transition: opacity 0.25s;
 }
 .prev-overlay.show { opacity: 1; pointer-events: all; }
 .prev-overlay img {
-  max-width: 100%; max-height: 56vh;
+  max-width: 100%; max-height: 50vh;
   border-radius: 12px; object-fit: contain;
   box-shadow: 0 12px 48px rgba(0,0,0,0.7);
 }
 .prev-label { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 500; }
-.prev-actions { display: flex; gap: 12px; width: 100%; }
+
+/* Progress */
+.prog-wrap {
+  width: 100%;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.prog-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.prog-info span {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+}
+.prog-track {
+  width: 100%; height: 5px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px; overflow: hidden;
+}
+.prog-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+/* Action buttons */
+.prev-actions { display: flex; gap: 10px; width: 100%; }
 .pv-btn {
   flex: 1; height: 50px;
   border: none; border-radius: 12px;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px; font-weight: 600;
+  font-size: 13px; font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
 }
-.pv-btn:active { opacity: 0.75; }
-.pv-discard { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
-.pv-save { background: var(--blue); color: #fff; box-shadow: 0 4px 16px rgba(91,184,245,0.4); }
-.pv-drive { background: #4285f4; color: #fff; box-shadow: 0 4px 16px rgba(66,133,244,0.35); }
+.pv-btn:active { opacity: 0.7; }
+.pv-discard { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); }
+.pv-galeri  { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(91,184,245,0.35); }
+.pv-drive   { background: #4285f4; color: #fff; box-shadow: 0 4px 14px rgba(66,133,244,0.35); }
 
-/* Progress bar (Drive upload) */
-.prog-wrap {
-  width: 100%; background: rgba(255,255,255,0.08);
-  border-radius: 6px; overflow: hidden;
-  height: 5px; display: none;
-}
-.prog-bar {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, var(--blue), #4285f4);
-  transition: width 0.2s;
-  border-radius: 6px;
+/* Drive result link */
+.drive-link {
+  display: none;
+  color: #a8d8f8;
+  font-size: 12px;
+  text-align: center;
+  text-decoration: underline;
+  word-break: break-all;
+  cursor: pointer;
 }
 
 /* ══ TOAST ══ */
@@ -278,21 +301,23 @@ canvas { display: none; }
   position: fixed;
   bottom: calc(var(--bottom-h) + 12px); left: 50%;
   transform: translateX(-50%) translateY(10px);
-  background: rgba(10,10,10,0.85);
+  background: rgba(10,10,10,0.88);
   color: #fff;
   font-size: 13px; font-weight: 500;
   padding: 10px 22px;
   border-radius: 100px;
-  z-index: 200;
+  z-index: 300;
   opacity: 0; pointer-events: none;
   transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
   backdrop-filter: blur(10px);
   white-space: nowrap;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  max-width: 90vw;
+  text-align: center;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-#toast.ok  { background: rgba(0,150,70,0.9); }
-#toast.err { background: rgba(200,30,30,0.9); }
+#toast.ok   { background: rgba(0,150,70,0.92); }
+#toast.err  { background: rgba(200,30,30,0.92); }
 </style>
 </head>
 <body>
@@ -303,11 +328,26 @@ canvas { display: none; }
 <div class="prev-overlay" id="prevOverlay">
   <div class="prev-label">Foto berhasil diambil</div>
   <img id="prevImg" alt="">
-  <div class="prog-wrap" id="progWrap"><div class="prog-bar" id="progBar"></div></div>
+
+  <!-- Progress (muncul saat upload) -->
+  <div class="prog-wrap" id="progWrap">
+    <div class="prog-info">
+      <span id="progLabel">Mengupload ke Drive...</span>
+      <span id="progPct">0%</span>
+    </div>
+    <div class="prog-track">
+      <div class="prog-fill" id="progFill"></div>
+    </div>
+  </div>
+
+  <!-- Link hasil upload -->
+  <a class="drive-link" id="driveLink" target="_blank">Buka di Google Drive ↗</a>
+
+  <!-- Tombol aksi -->
   <div class="prev-actions" id="prevActions">
-    <button class="pv-btn pv-discard" onclick="buangFoto()">✕ Buang</button>
-    <button class="pv-btn pv-save" onclick="simpanGaleri()">📱 Galeri</button>
-    <button class="pv-btn pv-drive" onclick="uploadDrive()">☁ Drive</button>
+    <button class="pv-btn pv-discard" onclick="buangFoto()">✕</button>
+    <button class="pv-btn pv-galeri"  onclick="simpanGaleri()">📱 Galeri</button>
+    <button class="pv-btn pv-drive"   onclick="uploadDrive()">☁ Drive</button>
   </div>
 </div>
 
@@ -319,7 +359,7 @@ canvas { display: none; }
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
         <circle cx="12" cy="13" r="4"/>
       </svg>
-      <p>Tap tombol biru untuk mulai</p>
+      <p>Tap tombol biru untuk mulai kamera</p>
     </div>
     <video id="vid" autoplay playsinline muted></video>
     <canvas id="cvs"></canvas>
@@ -327,31 +367,24 @@ canvas { display: none; }
     <div class="pinch-hint">Cubit 2 jari untuk zoom · Tap 2× reset</div>
   </div>
 
-  <!-- Bottom -->
+  <!-- Bottom Bar -->
   <div class="bottom">
-    <!-- Row 1: Capture -->
     <div class="row-capture">
       <div class="capture-btn" onclick="handleCapture()">
         <div class="capture-inner"></div>
       </div>
     </div>
-
-    <!-- Row 2: LED + BLE -->
     <div class="row-controls">
       <div class="led-group">
-        <!-- LED Putih -->
         <div class="led-card" id="ledPutih" onclick="toggleLED('putih')">
           <div class="led-indicator"></div>
           <div class="toggle"></div>
         </div>
-        <!-- LED Biru -->
         <div class="led-card" id="ledBiru" onclick="toggleLED('biru')">
           <div class="led-indicator"></div>
           <div class="toggle"></div>
         </div>
       </div>
-
-      <!-- BLE button (small vertical pill) -->
       <div class="ble-btn" id="bleBtn" onclick="toggleBLE()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/>
@@ -363,50 +396,46 @@ canvas { display: none; }
 </div>
 
 <script>
-// ════════════════════════════════
-// KONFIGURASI
-// ════════════════════════════════
+// ══════════════════════════════════════════════
+// KONFIGURASI — JANGAN UBAH
+// ══════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
+
 const BLE_SVC  = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
 const BLE_CHAR = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
-// ⚠️ ISI TOKEN GOOGLE DRIVE KAMU DI SINI
-// Cara dapat token: https://developers.google.com/oauthplayground
-// Scope: https://www.googleapis.com/auth/drive.file
-const DRIVE_TOKEN = '';
-
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // STATE
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 let bleDevice = null, bleChar = null, bleOn = false;
 let camStream = null, camOn = false;
-let ledState = { putih: false, biru: false };
-let fotoBlob = null, fotoURL = null;
+let ledState  = { putih: false, biru: false };
+let fotoBlob  = null, fotoObjURL = null;
 let scale = 1, p0dist = 0, p0scale = 1;
 const SMIN = 1, SMAX = 6;
 let badgeTmr, toastTmr;
 
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // TOAST
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 function toast(msg, t = '') {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.className = 'show ' + t;
   clearTimeout(toastTmr);
-  toastTmr = setTimeout(() => el.className = '', 3200);
+  toastTmr = setTimeout(() => el.className = '', 3500);
 }
 
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // BLE
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 async function toggleBLE() {
   bleOn ? bleDevice?.gatt?.disconnect() : await connectBLE();
 }
 
 async function connectBLE() {
   if (!navigator.bluetooth) {
-    toast('Browser tidak support Web Bluetooth.\nGunakan Chrome/Edge di Android.', 'err');
-    return;
+    toast('Gunakan Chrome/Edge di Android', 'err'); return;
   }
   try {
     toast('🔍 Mencari perangkat...');
@@ -414,11 +443,10 @@ async function connectBLE() {
       filters: [{ services: [BLE_SVC] }]
     });
     bleDevice.addEventListener('gattserverdisconnected', () => {
-      setBLE(false); toast('⚡ Perangkat terputus', 'err');
+      setBLE(false); toast('Perangkat terputus', 'err');
     });
     const srv = await bleDevice.gatt.connect();
-    const svc = await srv.getPrimaryService(BLE_SVC);
-    bleChar   = await svc.getCharacteristic(BLE_CHAR);
+    bleChar   = await (await srv.getPrimaryService(BLE_SVC)).getCharacteristic(BLE_CHAR);
     setBLE(true);
     toast('✓ Terhubung: ' + bleDevice.name, 'ok');
   } catch(e) {
@@ -428,8 +456,7 @@ async function connectBLE() {
 
 function setBLE(on) {
   bleOn = on;
-  const btn = document.getElementById('bleBtn');
-  btn.className = 'ble-btn' + (on ? ' on' : '');
+  document.getElementById('bleBtn').className = 'ble-btn' + (on ? ' on' : '');
   document.getElementById('bleTxt').textContent = on ? '✓' : 'BLE';
   if (!on) { bleDevice = null; bleChar = null; }
 }
@@ -440,29 +467,25 @@ async function kirim(cmd) {
   catch(e) { toast('Gagal kirim perintah', 'err'); }
 }
 
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // LED
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 function toggleLED(id) {
   ledState[id] = !ledState[id];
-  const card = document.getElementById('led' + id[0].toUpperCase() + id.slice(1));
-  card.classList.toggle('on', ledState[id]);
+  document.getElementById('led' + id[0].toUpperCase() + id.slice(1))
+    .classList.toggle('on', ledState[id]);
   kirim(id === 'putih'
     ? (ledState.putih ? 'W:1023' : 'W:0')
     : (ledState.biru  ? 'B:1023' : 'B:0'));
 }
 
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // KAMERA
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 async function startCam() {
   try {
     camStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
     const v = document.getElementById('vid');
     v.srcObject = camStream;
@@ -472,7 +495,7 @@ async function startCam() {
     camOn = true; scale = 1;
     applyZoom(false);
   } catch(e) {
-    toast('Izin kamera ditolak atau tidak tersedia', 'err');
+    toast('Izin kamera ditolak', 'err');
   }
 }
 
@@ -481,16 +504,15 @@ function handleCapture() {
   jepret();
 }
 
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // PINCH-TO-ZOOM
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 const wrap = document.getElementById('camWrap');
 
 wrap.addEventListener('touchstart', e => {
   if (e.touches.length === 2) {
     e.preventDefault();
-    p0dist = dist2(e.touches);
-    p0scale = scale;
+    p0dist = dist2(e.touches); p0scale = scale;
   }
 }, { passive: false });
 
@@ -498,10 +520,7 @@ wrap.addEventListener('touchmove', e => {
   if (e.touches.length === 2) {
     e.preventDefault();
     const ns = Math.min(SMAX, Math.max(SMIN, p0scale * dist2(e.touches) / p0dist));
-    if (Math.abs(ns - scale) > 0.02) {
-      scale = ns;
-      applyZoom(true);
-    }
+    if (Math.abs(ns - scale) > 0.02) { scale = ns; applyZoom(true); }
   }
 }, { passive: false });
 
@@ -512,7 +531,6 @@ wrap.addEventListener('touchend', e => {
   }
 });
 
-// Double-tap reset
 let lastTap = 0;
 wrap.addEventListener('touchend', e => {
   if (e.touches.length > 0) return;
@@ -532,184 +550,165 @@ function applyZoom(showBadge) {
   if (showBadge) b.classList.add('show');
 }
 
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 // JEPRET
-// ════════════════════════════════
+// ══════════════════════════════════════════════
 function jepret() {
-  const v   = document.getElementById('vid');
-  const cvs = document.getElementById('cvs');
+  const v = document.getElementById('vid');
   if (!v.srcObject) return;
 
-  const vw = v.videoWidth  || 1280;
-  const vh = v.videoHeight || 720;
+  const vw = v.videoWidth || 1280, vh = v.videoHeight || 720;
   const cw = vw / scale, ch = vh / scale;
-
+  const cvs = document.getElementById('cvs');
   cvs.width = vw; cvs.height = vh;
   cvs.getContext('2d').drawImage(v, (vw-cw)/2, (vh-ch)/2, cw, ch, 0, 0, vw, vh);
 
-  // Simpan sebagai Blob (lebih efisien dari dataURL untuk upload)
   cvs.toBlob(blob => {
-    fotoBlob = blob;
-    fotoURL  = URL.createObjectURL(blob);
-    document.getElementById('prevImg').src = fotoURL;
+    if (fotoObjURL) URL.revokeObjectURL(fotoObjURL);
+    fotoBlob   = blob;
+    fotoObjURL = URL.createObjectURL(blob);
+    document.getElementById('prevImg').src = fotoObjURL;
+    document.getElementById('driveLink').style.display = 'none';
     document.getElementById('prevOverlay').classList.add('show');
   }, 'image/jpeg', 0.93);
 }
 
-// ════════════════════════════════
-// PREVIEW — BUANG
-// ════════════════════════════════
+// ══════════════════════════════════════════════
+// BUANG FOTO
+// ══════════════════════════════════════════════
 function buangFoto() {
   document.getElementById('prevOverlay').classList.remove('show');
-  if (fotoURL) URL.revokeObjectURL(fotoURL);
-  fotoBlob = null; fotoURL = null;
+  document.getElementById('progWrap').style.display = 'none';
+  document.getElementById('prevActions').style.display = 'flex';
+  document.getElementById('driveLink').style.display = 'none';
+  setProgress(0, '');
+  if (fotoObjURL) { URL.revokeObjectURL(fotoObjURL); fotoObjURL = null; }
+  fotoBlob = null;
 }
 
-// ════════════════════════════════
-// SIMPAN KE GALERI
-// Fix: gunakan createObjectURL → <a download> auto-click
-// Web Share API untuk Android/iOS
-// ════════════════════════════════
+// ══════════════════════════════════════════════
+// SIMPAN KE GALERI HP
+// ══════════════════════════════════════════════
 async function simpanGaleri() {
   if (!fotoBlob) { toast('Belum ada foto', 'err'); return; }
 
-  const ts   = timestamp();
-  const name = `medscan_${ts}.jpg`;
+  const name = `medscan_${ts()}.jpg`;
+  const file = new File([fotoBlob], name, { type: 'image/jpeg' });
 
-  // ── Coba Web Share API (Android Chrome / iOS Safari) ──
+  // Web Share API → langsung ke galeri (Android/iOS)
   if (typeof navigator.share === 'function') {
     try {
-      const file = new File([fotoBlob], name, { type: 'image/jpeg' });
-      // canShare bisa undefined di beberapa browser lama
-      const canFiles = !navigator.canShare || navigator.canShare({ files: [file] });
-      if (canFiles) {
-        buangFoto(); // tutup overlay dulu biar tidak block
+      const ok = !navigator.canShare || navigator.canShare({ files: [file] });
+      if (ok) {
         await navigator.share({ files: [file], title: 'MedScan' });
-        toast('✓ Foto tersimpan ke Galeri!', 'ok');
+        toast('✓ Tersimpan ke Galeri!', 'ok');
+        buangFoto();
         return;
       }
     } catch(e) {
-      if (e.name === 'AbortError') return; // user cancel, tidak error
-      // fall through ke metode lain
+      if (e.name === 'AbortError') return;
+      // fallthrough
     }
   }
 
-  // ── Fallback: trigger download ke storage HP ──
-  // Ini cara paling reliable di semua browser
-  downloadBlob(fotoBlob, name);
+  // Fallback: auto download
+  dlBlob(fotoBlob, name);
+  toast('✓ Foto diunduh ke penyimpanan!', 'ok');
   buangFoto();
-  toast('✓ Foto diunduh ke penyimpanan HP!', 'ok');
 }
 
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
-  a.href    = url;
-  a.download = filename;
-  // Harus append ke body agar works di Firefox
+function dlBlob(blob, name) {
+  const u = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: u, download: name });
   document.body.appendChild(a);
   a.click();
-  // Cleanup setelah delay kecil
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 300);
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
 }
 
-// ════════════════════════════════
-// UPLOAD KE GOOGLE DRIVE
-// Fix: pakai Blob langsung (bukan dataURL), multipart upload
-// Tampilkan progress real-time
-// ════════════════════════════════
+// ══════════════════════════════════════════════
+// UPLOAD KE GOOGLE DRIVE via Apps Script
+// Permanen — tidak butuh token!
+// ══════════════════════════════════════════════
 async function uploadDrive() {
   if (!fotoBlob) { toast('Belum ada foto', 'err'); return; }
 
-  if (!DRIVE_TOKEN) {
-    toast('⚠️ Isi DRIVE_TOKEN dulu di kode', 'err');
-    return;
-  }
-
   // Tampilkan progress, sembunyikan tombol
-  const actions  = document.getElementById('prevActions');
-  const progWrap = document.getElementById('progWrap');
-  const progBar  = document.getElementById('progBar');
-  actions.style.display  = 'none';
-  progWrap.style.display = 'block';
-  setProgress(progBar, 5);
+  document.getElementById('prevActions').style.display = 'none';
+  document.getElementById('driveLink').style.display   = 'none';
+  const pw = document.getElementById('progWrap');
+  pw.style.display = 'flex';
+  setProgress(10, 'Mempersiapkan...');
 
-  const ts       = timestamp();
-  const filename = `medscan_${ts}.jpg`;
-  const meta     = JSON.stringify({ name: filename, mimeType: 'image/jpeg' });
-  const boundary = 'mscan_' + Date.now();
+  try {
+    // Konversi Blob → Base64 (Apps Script butuh base64)
+    const b64 = await blobToBase64(fotoBlob);
+    setProgress(30, 'Mengirim ke Drive...');
 
-  // Build multipart body dengan Blob (tidak perlu base64, lebih cepat!)
-  const metaPart = new Blob([
-    `--${boundary}\r\n`,
-    `Content-Type: application/json; charset=UTF-8\r\n\r\n`,
-    meta,
-    `\r\n--${boundary}\r\n`,
-    `Content-Type: image/jpeg\r\n\r\n`
-  ], { type: 'text/plain' });
+    const nama = `medscan_${ts()}.jpg`;
 
-  const closePart = new Blob([`\r\n--${boundary}--`], { type: 'text/plain' });
-  const body      = new Blob([metaPart, fotoBlob, closePart]);
+    // Kirim ke Google Apps Script via fetch POST
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename:  nama,
+        mimeType:  'image/jpeg',
+        data:      b64          // base64 string tanpa prefix
+      })
+    });
 
-  setProgress(progBar, 15);
+    setProgress(85, 'Menyimpan...');
 
-  // Gunakan XHR agar dapat progress event
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink');
-  xhr.setRequestHeader('Authorization', 'Bearer ' + DRIVE_TOKEN);
-  xhr.setRequestHeader('Content-Type', `multipart/related; boundary=${boundary}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
 
-  xhr.upload.onprogress = e => {
-    if (e.lengthComputable) {
-      const pct = 15 + Math.round((e.loaded / e.total) * 80);
-      setProgress(progBar, pct);
+    const json = await res.json();
+    setProgress(100, 'Selesai! ✓');
+
+    // Tampilkan link ke file di Drive
+    if (json.url || json.fileUrl || json.link) {
+      const link = document.getElementById('driveLink');
+      link.href  = json.url || json.fileUrl || json.link;
+      link.style.display = 'block';
     }
-  };
 
-  xhr.onload = () => {
-    if (xhr.status === 200 || xhr.status === 201) {
-      setProgress(progBar, 100);
-      try {
-        const res = JSON.parse(xhr.responseText);
-        console.log('Drive file:', res);
-      } catch(_) {}
-      toast('✓ Berhasil upload ke Drive!', 'ok');
-      setTimeout(() => {
-        buangFoto();
-        progWrap.style.display = 'none';
-        actions.style.display  = 'flex';
-        setProgress(progBar, 0);
-      }, 1500);
-    } else if (xhr.status === 401) {
-      resetDriveUI(actions, progWrap, progBar);
-      toast('Token kedaluwarsa, perbarui DRIVE_TOKEN', 'err');
-    } else {
-      resetDriveUI(actions, progWrap, progBar);
-      toast('Upload gagal: HTTP ' + xhr.status, 'err');
-    }
-  };
+    toast('✓ Berhasil upload ke Google Drive!', 'ok');
 
-  xhr.onerror = () => {
-    resetDriveUI(actions, progWrap, progBar);
-    toast('Tidak ada koneksi internet', 'err');
-  };
+    // Reset setelah 2.5 detik
+    setTimeout(() => {
+      pw.style.display = 'none';
+      document.getElementById('prevActions').style.display = 'flex';
+      setProgress(0, '');
+    }, 2500);
 
-  xhr.send(body);
+  } catch(e) {
+    pw.style.display = 'none';
+    document.getElementById('prevActions').style.display = 'flex';
+    setProgress(0, '');
+    toast('Gagal upload: ' + (e.message || e), 'err');
+    console.error('Drive upload error:', e);
+  }
 }
 
-function setProgress(bar, pct) {
-  bar.style.width = pct + '%';
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function setProgress(pct, label) {
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent  = pct + '%';
+  if (label) document.getElementById('progLabel').textContent = label;
 }
-function resetDriveUI(actions, progWrap, progBar) {
-  progWrap.style.display = 'none';
-  actions.style.display  = 'flex';
-  setProgress(progBar, 0);
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(r.result.split(',')[1]); // ambil bagian setelah "data:...;base64,"
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
 }
-function timestamp() {
-  return new Date().toISOString().slice(0,19).replace(/[:.]/g, '-');
+
+function ts() {
+  return new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
 }
 </script>
 </body>
