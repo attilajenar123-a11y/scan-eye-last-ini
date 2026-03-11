@@ -2,548 +2,167 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ScanCornea</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Medis ESP32</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            font-family: -apple-system, 'Helvetica Neue', sans-serif;
-            background: #000;
-            width: 100vw;
-            height: 100dvh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ══════════════════════════════════
-           KAMERA AREA
-        ══════════════════════════════════ */
-        #cameraArea {
-            position: relative;
-            width: 100%;
-            flex: 1;
-            background: #d0d0d0;
-            overflow: hidden;
-        }
-
-        #kamera {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        #cameraPlaceholder {
-            position: absolute; inset: 0;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            gap: 14px;
-            background: #d4d4d4;
-            color: #999; font-size: 15px;
-        }
-        #cameraPlaceholder svg { opacity: 0.45; }
-        .camera-on #cameraPlaceholder { display: none; }
-
-        /* Crosshair */
-        #crosshairOverlay {
-            position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none;
-            opacity: 0; transition: opacity 0.4s;
-        }
-        .camera-on #crosshairOverlay { opacity: 1; }
-        .crosshair-ring {
-            width: 130px; height: 130px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.78);
-            box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
-            position: relative;
-        }
-        .crosshair-ring::before,
-        .crosshair-ring::after {
-            content: ''; position: absolute;
-            background: rgba(255,255,255,0.7);
-        }
-        .crosshair-ring::before { width: 1px; height: 22px; top: -26px; left: 50%; transform: translateX(-50%); }
-        .crosshair-ring::after  { height: 1px; width: 22px; left: -26px; top: 50%; transform: translateY(-50%); }
-
-        /* Flash */
-        #flashOverlay {
-            position: absolute; inset: 0;
-            background: white; opacity: 0;
-            pointer-events: none; transition: opacity 0.05s;
-        }
-        #flashOverlay.flash { opacity: 0.85; }
-
-        /* Upload status pill */
-        #uploadStatus {
-            position: absolute; bottom: 12px; left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.55);
-            color: white; font-size: 13px;
-            padding: 6px 16px; border-radius: 99px;
-            opacity: 0; transition: opacity 0.3s;
-            pointer-events: none; white-space: nowrap;
-            backdrop-filter: blur(6px);
-        }
-        #uploadStatus.visible { opacity: 1; pointer-events: auto; }
-        #uploadStatus a { color: #7dd8f0; text-decoration: none; font-weight: 500; }
-
-        /* ══════════════════════════════════
-           BOTTOM BAR — BASE (mobile)
-        ══════════════════════════════════ */
-        #bottomBar {
-            width: 100%;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-
-            /* Mobile default */
-            padding: 18px 28px 36px;
-            gap: 16px;
-        }
-
-        /* ── LED CARDS ── */
-        #ledGroup { display: flex; gap: 10px; align-items: center; }
-
-        .led-card {
-            cursor: pointer; user-select: none;
-            background: #f5f5f5;
-            border: 1.5px solid #e0e0e0;
-            border-radius: 14px;
-            display: flex; flex-direction: column;
-            align-items: center;
-            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-
-            /* Mobile */
-            width: 62px;
-            padding: 10px 0 8px;
-            gap: 8px;
-        }
-        .led-card.on {
-            background: #e8f4ff;
-            border-color: #90c8f0;
-            box-shadow: 0 0 10px rgba(90,170,240,0.25);
-        }
-
-        /* Label teks — hidden on mobile, shown on desktop */
-        .led-label {
-            font-size: 13px; font-weight: 500;
-            color: #444;
-            display: none; /* mobile: hide */
-        }
-
-        .led-bulb {
-            width: 26px; height: 26px; border-radius: 50%;
-            background: #c8c8c8; border: 2px solid #b0b0b0;
-            transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-            flex-shrink: 0;
-        }
-        .led-card.on .led-bulb.blue {
-            background: #5ab4f0; border-color: #3a9ae0;
-            box-shadow: 0 0 10px rgba(90,180,240,0.85);
-        }
-        .led-card.on .led-bulb.white {
-            background: #fff8d0; border-color: #d0c060;
-            box-shadow: 0 0 12px rgba(255,240,140,0.95);
-        }
-
-        .led-toggle-track {
-            border-radius: 99px;
-            background: #d0d0d0;
-            position: relative;
-            transition: background 0.2s;
-
-            /* Mobile */
-            width: 36px; height: 20px;
-        }
-        .led-toggle-track::after {
-            content: ''; position: absolute;
-            background: white; border-radius: 50%;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
-            /* Mobile */
-            width: 14px; height: 14px;
-            top: 3px; left: 3px;
-        }
-        .led-card.on .led-toggle-track { background: #5ab4f0; }
-        .led-card.on .led-toggle-track::after { transform: translateX(16px); }
-
-        /* ── TOMBOL JEPRET ── */
-        #btnJepret {
-            border-radius: 50%; background: #5ab4f0;
-            border: 4px solid white; outline: 3px solid #5ab4f0;
-            cursor: pointer; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-            transition: transform 0.1s, background 0.15s;
-            box-shadow: 0 4px 16px rgba(90,180,240,0.45);
-
-            /* Mobile */
-            width: 72px; height: 72px;
-        }
-        #btnJepret:active { transform: scale(0.91); background: #3a9ae0; }
-        #btnJepret:disabled { background: #ccc; outline-color: #ccc; box-shadow: none; cursor: not-allowed; }
-        #btnJepret svg { pointer-events: none; }
-
-        /* ── TOMBOL BLE ── */
-        #btnConnect {
-            cursor: pointer;
-            background: #ebebeb;
-            border: 1.5px solid #d5d5d5;
-            transition: background 0.2s, border-color 0.2s;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-
-            /* Mobile: kolom kecil */
-            flex-direction: column;
-            gap: 5px;
-            width: 38px;
-            border-radius: 12px;
-            padding: 12px 0;
-            min-height: 68px;
-        }
-        .ble-label { display: none; font-size: 14px; font-weight: 500; color: #444; }
-        .ble-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #bbb; transition: background 0.3s, box-shadow 0.3s;
-            flex-shrink: 0;
-        }
-        #btnConnect svg { opacity: 0.5; transition: opacity 0.2s; flex-shrink: 0; }
-
-        #btnConnect.connected { background: #e8f9f2; border-color: #7dd8b5; }
-        #btnConnect.connected .ble-dot { background: #0a9e6e; box-shadow: 0 0 0 3px rgba(10,158,110,0.2); animation: pulseDot 2s infinite; }
-        #btnConnect.connected svg { opacity: 0.85; color: #0a9e6e; }
-        #btnConnect.connected .ble-label { color: #0a9e6e; }
-        #btnConnect.connecting { background: #fffbeb; border-color: #fbbf24; }
-        #btnConnect.connecting .ble-dot { background: #f59e0b; }
-
-        @keyframes pulseDot {
-            0%,100% { box-shadow: 0 0 0 3px rgba(10,158,110,0.25); }
-            50%      { box-shadow: 0 0 0 6px rgba(10,158,110,0.0); }
-        }
-
-        /* ══════════════════════════════════
-           DESKTOP OVERRIDES  (≥ 768px)
-        ══════════════════════════════════ */
-        @media (min-width: 768px) {
-
-            #bottomBar {
-                padding: 20px 48px 24px;
-                gap: 0;
-            }
-
-            /* LED cards — lebih besar, label muncul */
-            .led-card {
-                width: 130px;
-                padding: 14px 16px 12px;
-                border-radius: 16px;
-                gap: 10px;
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            #ledGroup { gap: 14px; }
-
-            .led-label { display: block; }
-
-            .led-bulb { width: 32px; height: 32px; }
-
-            .led-toggle-track {
-                width: 48px; height: 26px;
-                align-self: center;
-            }
-            .led-toggle-track::after {
-                width: 18px; height: 18px;
-                top: 4px; left: 4px;
-            }
-            .led-card.on .led-toggle-track::after { transform: translateX(22px); }
-
-            /* Tombol jepret */
-            #btnJepret { width: 80px; height: 80px; }
-
-            /* Tombol BLE — persegi panjang horizontal dengan teks */
-            #btnConnect {
-                flex-direction: row;
-                gap: 10px;
-                width: auto;
-                min-height: unset;
-                padding: 14px 22px;
-                border-radius: 10px;
-            }
-            .ble-dot { width: 9px; height: 9px; }
-            .ble-label { display: block; font-size: 15px; }
-            #btnConnect svg { display: none; } /* desktop pakai label teks, icon disembunyikan */
-        }
-
-        /* ══════════════════════════════════
-           TOAST
-        ══════════════════════════════════ */
-        #toast {
-            position: fixed; bottom: 110px; left: 50%;
-            transform: translateX(-50%) translateY(10px);
-            background: rgba(20,20,20,0.82);
-            color: white; padding: 10px 20px;
-            border-radius: 99px; font-size: 13px;
-            white-space: nowrap; opacity: 0;
-            transition: opacity 0.2s, transform 0.2s;
-            pointer-events: none; z-index: 999;
-            backdrop-filter: blur(8px);
-        }
-        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-        canvas { display: none; }
+        /* CSS Buat Bikin Tampilan Kayak Aplikasi Pro */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h2 { color: #333; margin-bottom: 5px; }
+        p.subtitle { color: #777; font-size: 14px; margin-top: 0; margin-bottom: 20px; }
+        
+        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); } /* Efek menciut pas dipencet */
+        
+        /* Warna-warni tombol */
+        .btn-connect { background-color: #28a745; color: white; }
+        .btn-disconnect { background-color: #dc3545; color: white; display: none; }
+        .btn-blue { background-color: #007bff; color: white; }
+        .btn-white { background-color: #e2e6ea; color: #333; border: 1px solid #ccc; }
+        .btn-save { background-color: #ffc107; color: #333; }
+        
+        #status { margin: 15px 0; font-weight: bold; padding: 10px; border-radius: 5px; background-color: #e9ecef; color: #495057; }
+        
+        .image-container { margin: 20px 0; padding: 10px; border: 2px dashed #ccc; border-radius: 10px; background-color: #fafafa; }
+        img { width: 100%; max-width: 350px; border-radius: 8px; display: block; margin: auto; }
     </style>
 </head>
 <body>
 
-<!-- KAMERA -->
-<div id="cameraArea">
-    <video id="kamera" autoplay playsinline></video>
+<div class="card">
+    <h2>👁️ Medis Scanner</h2>
+    <p class="subtitle">Kontrol Perangkat via Bluetooth</p>
 
-    <div id="cameraPlaceholder">
-        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-        </svg>
-        ScanCornea — Kamera belum aktif
+    <div id="status">🔴 Status: Belum Terhubung</div>
+
+    <button id="btnConnect" class="btn-connect" onclick="connectBLE()">🔗 Hubungkan Bluetooth</button>
+    <button id="btnDisconnect" class="btn-disconnect" onclick="disconnectBLE()">❌ Putuskan Koneksi</button>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+    <h3 style="font-size: 16px; color: #555; text-align: left;">Kontrol Pencahayaan:</h3>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-blue" onclick="kirimPerintah('B:1023')">🔵 Biru ON</button>
+        <button class="btn-white" onclick="kirimPerintah('B:0')">⭕ Biru OFF</button>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-white" style="background-color: #f8f9fa; border-color: #999;" onclick="kirimPerintah('W:1023')">⚪ Putih ON</button>
+        <button class="btn-white" onclick="kirimPerintah('W:0')">⭕ Putih OFF</button>
     </div>
 
-    <div id="crosshairOverlay"><div class="crosshair-ring"></div></div>
-    <div id="flashOverlay"></div>
-    <div id="uploadStatus"></div>
-</div>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
-<!-- BOTTOM BAR -->
-<div id="bottomBar">
-
-    <!-- LED CARDS -->
-    <div id="ledGroup">
-        <div class="led-card" id="cardBiru" onclick="toggleLED('B')">
-            <span class="led-label">LED Biru</span>
-            <div class="led-bulb blue"></div>
-            <div class="led-toggle-track"></div>
-        </div>
-        <div class="led-card" id="cardPutih" onclick="toggleLED('W')">
-            <span class="led-label">LED Putih</span>
-            <div class="led-bulb white"></div>
-            <div class="led-toggle-track"></div>
-        </div>
+    <h3 style="font-size: 16px; color: #555; text-align: left;">Preview Kamera:</h3>
+    <div class="image-container">
+        <img id="fotoMata" src="https://via.placeholder.com/400x300.png?text=Menunggu+Kamera..." alt="Hasil Kamera">
     </div>
-
-    <!-- TOMBOL JEPRET -->
-    <button id="btnJepret" onclick="jepret()">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-        </svg>
-    </button>
-
-    <!-- TOMBOL BLE -->
-    <button id="btnConnect" onclick="connectBLE()">
-        <div class="ble-dot"></div>
-        <!-- Mobile: icon bluetooth -->
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/>
-        </svg>
-        <!-- Desktop: teks label -->
-        <span class="ble-label">Bluetooth</span>
-    </button>
-
+    
+    <button class="btn-save" onclick="simpanKeHP()">💾 Simpan Foto ke HP</button>
 </div>
-
-<div id="toast"></div>
-<canvas id="canvasFoto"></canvas>
 
 <script>
-const CONFIG = {
-    // Paste URL Google Apps Script Web App kamu di sini setelah deploy
-    DRIVE_WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbwxXVHqd1HF8T_G_kqZn_ixYm6KNfKspNfpg5jPH5Fse6NEf2j7p0a_pdcIGiWpQhkIaQ/exec',
+    // UUID wajib sama persis dengan kodingan MicroPython di Thonny!
+    const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0";
+    const CHAR_UUID = "12345678-1234-5678-1234-56789abcdef1";
 
-    BLE_SERVICE_UUID: '12345678-1234-5678-1234-56789abcdef0',
-    BLE_CHAR_UUID:    '12345678-1234-5678-1234-56789abcdef1',
-    BLE_DEVICE_NAME:  'ESP32-Medis',
-};
+    let bleDevice;
+    let bleCharacteristic;
 
-// ── Toast ──
-let toastTimer;
-function showToast(msg) {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
-}
+    // Fungsi Utama: Konek ke ESP32
+    async function connectBLE() {
+        try {
+            updateStatus("🟡 Mencari perangkat 'ESP32-Medis'...");
+            
+            bleDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ name: "ESP32-Medis" }],
+                optionalServices: [SERVICE_UUID]
+            });
 
-// ── Kamera — nyala otomatis ──
-const video      = document.getElementById('kamera');
-const cameraArea = document.getElementById('cameraArea');
-let kameraAktif  = false;
+            // Deteksi kalau Bluetooth tiba-tiba putus dari alatnya
+            bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-async function startCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-        });
-        video.srcObject = stream;
-        kameraAktif = true;
-        cameraArea.classList.add('camera-on');
-    } catch {
-        showToast('Izinkan akses kamera di browser');
-    }
-}
-startCamera();
+            updateStatus("🟡 Menghubungkan ke server...");
+            const server = await bleDevice.gatt.connect();
 
-// ── BLE ──
-let myChar = null, bleDevice = null;
+            updateStatus("🟡 Mencari layanan medis...");
+            const service = await server.getPrimaryService(SERVICE_UUID);
 
-function setBleState(state) {
-    const btn = document.getElementById('btnConnect');
-    btn.classList.remove('connected', 'connecting');
-    if (state === 'connected')  btn.classList.add('connected');
-    if (state === 'connecting') btn.classList.add('connecting');
-}
+            updateStatus("🟡 Menyiapkan jalur komunikasi...");
+            bleCharacteristic = await service.getCharacteristic(CHAR_UUID);
 
-async function connectToDevice(device) {
-    const server  = await device.gatt.connect();
-    const service = await server.getPrimaryService(CONFIG.BLE_SERVICE_UUID);
-    myChar = await service.getCharacteristic(CONFIG.BLE_CHAR_UUID);
-    setBleState('connected');
-    showToast('✅ Terhubung ke ' + device.name);
-}
+            updateStatus("🟢 Terhubung siap pakai!");
+            
+            // Atur tombol UI
+            document.getElementById('btnConnect').style.display = 'none';
+            document.getElementById('btnDisconnect').style.display = 'block';
 
-async function onDisconnected() {
-    myChar = null;
-    setBleState('disconnected');
-    showToast('BLE terputus, mencoba ulang...');
-    for (let i = 0; i < 5; i++) {
-        await new Promise(r => setTimeout(r, 2000));
-        if (bleDevice?.gatt?.connected) return;
-        try { setBleState('connecting'); await connectToDevice(bleDevice); return; } catch {}
-    }
-    setBleState('disconnected');
-    showToast('Gagal reconnect. Tekan Bluetooth.');
-}
-
-async function connectBLE() {
-    if (!navigator.bluetooth) { showToast('Gunakan Chrome atau Edge'); return; }
-    if (bleDevice?.gatt?.connected) {
-        bleDevice.gatt.disconnect();
-        myChar = null; setBleState('disconnected');
-        showToast('Bluetooth diputus');
-        return;
-    }
-    setBleState('connecting');
-    showToast('🔍 Mencari ESP32-Medis...');
-    try {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ name: CONFIG.BLE_DEVICE_NAME }],
-            optionalServices: [CONFIG.BLE_SERVICE_UUID]
-        });
-        bleDevice = device;
-        device.addEventListener('gattserverdisconnected', onDisconnected);
-        await connectToDevice(device);
-    } catch (err) {
-        setBleState('disconnected');
-        showToast(err.name === 'NotFoundError' ? 'Dibatalkan' : 'Gagal: ' + err.message);
-    }
-}
-
-// ── LED Toggle ──
-const ledState = { B: false, W: false };
-
-function kirimLED(warna, nyala) {
-    if (!myChar) return;
-    myChar.writeValue(new TextEncoder().encode(`${warna}:${nyala ? 1023 : 0}`)).catch(() => {});
-}
-
-function toggleLED(warna) {
-    ledState[warna] = !ledState[warna];
-    const cardId = warna === 'B' ? 'cardBiru' : 'cardPutih';
-    document.getElementById(cardId).classList.toggle('on', ledState[warna]);
-    kirimLED(warna, ledState[warna]);
-}
-
-// ── Jepret & Upload ke Google Drive ──
-let isUploading = false;
-
-async function jepret() {
-    if (isUploading) return;
-    if (!kameraAktif || !video.videoWidth) {
-        await startCamera(); showToast('Kamera menyala, coba lagi'); return;
-    }
-    if (!CONFIG.DRIVE_WEBAPP_URL || CONFIG.DRIVE_WEBAPP_URL.includes('PASTE_')) {
-        showToast('⚠️ URL Apps Script belum diisi di CONFIG'); return;
+        } catch (error) {
+            console.error(error);
+            updateStatus("🔴 Gagal konek: " + error.message);
+        }
     }
 
-    isUploading = true;
-    const btn      = document.getElementById('btnJepret');
-    const flash    = document.getElementById('flashOverlay');
-    const statusEl = document.getElementById('uploadStatus');
-    btn.disabled = true;
-
-    // Flash effect
-    flash.classList.add('flash');
-    setTimeout(() => flash.classList.remove('flash'), 150);
-
-    // Ambil frame dari video
-    const canvas = document.getElementById('canvasFoto');
-    const ctx    = canvas.getContext('2d');
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-    const imageData = canvas.toDataURL('image/jpeg', 0.92);
-
-    statusEl.textContent = '⏳ Menyimpan ke Drive...';
-    statusEl.classList.add('visible');
-
-    try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const payload   = { image: imageData.split(',')[1] };
-
-        const res  = await fetch(CONFIG.DRIVE_WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (data.status !== 'ok') throw new Error(data.message || 'Drive error');
-
-        statusEl.innerHTML = `✅ <a href="${data.url}" target="_blank">Lihat di Drive ↗</a>`;
-        showToast('📸 Foto tersimpan ke Google Drive!');
-        setTimeout(() => statusEl.classList.remove('visible'), 6000);
-    } catch (err) {
-        statusEl.textContent = '❌ Gagal: ' + err.message;
-        showToast('Upload gagal');
-        setTimeout(() => statusEl.classList.remove('visible'), 3000);
-    } finally {
-        isUploading = false;
-        btn.disabled = false;
+    // Fungsi Utama: Ngirim Perintah Nyala/Mati LED
+    async function kirimPerintah(pesan) {
+        if (!bleCharacteristic) {
+            alert("Bluetooth belum terhubung, Jenar! Klik 'Hubungkan' dulu ya.");
+            return;
+        }
+        try {
+            // Ubah teks perintah ("B:1023") jadi data yang bisa dikirim via Bluetooth
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pesan);
+            await bleCharacteristic.writeValue(data);
+            console.log("Berhasil kirim: ", pesan);
+        } catch (error) {
+            console.error("Gagal kirim data:", error);
+            alert("Gagal ngirim perintah! Coba cek koneksi.");
+        }
     }
-}
+
+    // Fungsi Utama: Putusin Koneksi
+    function disconnectBLE() {
+        if (!bleDevice) return;
+        if (bleDevice.gatt.connected) {
+            bleDevice.gatt.disconnect();
+        }
+    }
+
+    // Fungsi Trigger kalau koneksi putus
+    function onDisconnected() {
+        updateStatus("🔴 Terputus dari ESP32.");
+        bleCharacteristic = null;
+        document.getElementById('btnConnect').style.display = 'block';
+        document.getElementById('btnDisconnect').style.display = 'none';
+    }
+
+    // Fungsi Update Teks UI
+    function updateStatus(pesan) {
+        document.getElementById('status').innerText = pesan;
+    }
+
+    // Fungsi Spesial: Download Gambar ke Galeri HP
+    function simpanKeHP() {
+        const gambar = document.getElementById('fotoMata');
+        
+        // Cek kalau gambarnya kosong atau masih placeholder
+        if (!gambar.src || gambar.src.includes("placeholder")) {
+            alert("Kamera belum nangkap gambar asli nih!");
+            return;
+        }
+
+        const link = document.createElement('a');
+        link.href = gambar.src;
+        
+        // Kasih nama file unik pakai timestamp
+        const waktu = new Date().getTime();
+        link.download = 'Rekam_Medis_' + waktu + '.jpg';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 </script>
-    <script>
-function simpanKeHP() {
-    // 1. Ambil data gambar dari elemen <img id="fotoMata">
-    const gambar = document.getElementById('fotoMata');
-    
-    // Kalau gambarnya belum ada/kosong, kasih peringatan
-    if (!gambar.src || gambar.src === "") {
-        alert("Belum ada foto yang diambil!");
-        return;
-    }
 
-    // 2. Bikin elemen link (<a>) "gaib" atau tak kasat mata
-    const link = document.createElement('a');
-    
-    // 3. Masukin data gambar ke link tersebut
-    link.href = gambar.src;
-    
-    // 4. Kasih nama file otomatis biar nggak nabrak (misal: Pasien_1709849.jpg)
-    const waktu = new Date().getTime();
-    link.download = 'Mata_Pasien_' + waktu + '.jpg';
-    
-    // 5. Eksekusi klik otomatis biar HP langsung nge-download!
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-</script>
 </body>
 </html>
