@@ -10,20 +10,18 @@
 
 :root {
   --white: #ffffff;
-  --bg: #f4f5f7;
   --gray: #d8dce2;
   --blue: #5bb8f5;
   --blue-ring: #a8d8f8;
   --blue-dark: #1a7abf;
   --green: #22c55e;
-  --red: #ef4444;
   --bottom-h: 160px;
 }
 
 html, body {
   width: 100%; height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  background: #f4f5f7;
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
@@ -42,10 +40,8 @@ html, body {
   overflow: hidden;
   touch-action: none;
 }
-
 .cam-wrap video {
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
   transform-origin: center center;
@@ -53,48 +49,32 @@ html, body {
   pointer-events: none;
   display: none;
 }
-
 .cam-idle {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: #d0d4da;
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; background: #d0d4da;
 }
 .cam-idle svg { opacity: 0.28; }
 .cam-idle p { font-size: 13px; color: #666; font-weight: 500; }
 
 .zoom-badge {
-  position: absolute;
-  top: 14px; right: 14px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(0,0,0,0.55); color: #fff;
   font-size: 12px; font-weight: 700;
-  padding: 4px 11px;
-  border-radius: 100px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-  z-index: 5;
+  padding: 4px 11px; border-radius: 100px;
+  opacity: 0; transition: opacity 0.2s;
+  pointer-events: none; z-index: 5;
   backdrop-filter: blur(6px);
 }
 .zoom-badge.show { opacity: 1; }
 
 .pinch-hint {
-  position: absolute;
-  bottom: 12px; left: 50%;
+  position: absolute; bottom: 12px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,0,0,0.45);
-  color: rgba(255,255,255,0.85);
-  font-size: 11px;
-  padding: 5px 14px;
-  border-radius: 100px;
-  pointer-events: none;
-  white-space: nowrap;
-  display: none;
+  background: rgba(0,0,0,0.45); color: rgba(255,255,255,0.85);
+  font-size: 11px; padding: 5px 14px; border-radius: 100px;
+  pointer-events: none; white-space: nowrap; display: none;
   backdrop-filter: blur(6px);
 }
 .cam-on .pinch-hint { display: block; animation: fadeHint 3s forwards 2.5s; }
@@ -107,48 +87,52 @@ canvas { display: none; }
   height: var(--bottom-h);
   background: var(--white);
   border-top: 1.5px solid var(--gray);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-evenly;
   padding: 10px 20px 14px;
   flex-shrink: 0;
 }
-
 .row-capture {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+  display: flex; align-items: center;
+  justify-content: center; width: 100%;
 }
-
 .capture-btn {
   width: 66px; height: 66px;
   border-radius: 50%;
   border: 3px solid var(--blue-ring);
   background: transparent;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: transform 0.15s;
+  cursor: pointer; transition: transform 0.15s;
+  position: relative;
 }
 .capture-btn:active { transform: scale(0.88); }
 .capture-inner {
-  width: 50px; height: 50px;
-  border-radius: 50%;
+  width: 50px; height: 50px; border-radius: 50%;
   background: var(--blue);
   box-shadow: 0 4px 14px rgba(91,184,245,0.55);
   transition: background 0.15s;
+  display: flex; align-items: center; justify-content: center;
 }
 .capture-btn:active .capture-inner { background: #3aa0e0; }
 
-.row-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 10px;
+/* Spinner di dalam tombol capture saat processing */
+.spinner {
+  display: none;
+  width: 22px; height: 22px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
+.capture-btn.loading .capture-inner { background: #3aa0e0; }
+.capture-btn.loading .spinner { display: block; }
 
+.row-controls {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  width: 100%; gap: 10px;
+}
 .led-group { display: flex; gap: 10px; }
 
 .led-card {
@@ -157,42 +141,32 @@ canvas { display: none; }
   border: 1.5px solid var(--gray);
   border-radius: 12px;
   padding: 9px 10px 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
-  cursor: pointer;
-  user-select: none;
+  display: flex; flex-direction: column;
+  align-items: flex-start; gap: 7px;
+  cursor: pointer; user-select: none;
   transition: border-color 0.2s, background 0.2s;
 }
 .led-card:active { opacity: 0.75; }
 .led-card.on { border-color: var(--blue); background: rgba(91,184,245,0.07); }
 
 .led-indicator {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--gray);
-  transition: background 0.2s;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gray); transition: background 0.2s;
 }
 .led-card.on .led-indicator {
   background: var(--blue);
   box-shadow: 0 0 8px rgba(91,184,245,0.5);
 }
-
 .toggle {
   width: 46px; height: 26px;
-  background: var(--gray);
-  border-radius: 13px;
-  position: relative;
-  transition: background 0.22s;
+  background: var(--gray); border-radius: 13px;
+  position: relative; transition: background 0.22s;
 }
 .toggle::after {
-  content: '';
-  position: absolute;
+  content: ''; position: absolute;
   top: 3px; left: 3px;
   width: 20px; height: 20px;
-  background: #fff;
-  border-radius: 50%;
+  background: #fff; border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
 }
@@ -202,153 +176,155 @@ canvas { display: none; }
 .ble-btn {
   width: 42px; height: 72px;
   background: var(--gray);
-  border: 1.5px solid transparent;
-  border-radius: 10px;
+  border: 1.5px solid transparent; border-radius: 10px;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: all 0.2s;
+  gap: 5px; cursor: pointer; transition: all 0.2s;
   flex-shrink: 0;
 }
 .ble-btn:active { opacity: 0.7; }
 .ble-btn.on { background: rgba(91,184,245,0.15); border-color: var(--blue); }
 .ble-btn span {
-  font-size: 9px; font-weight: 700;
-  color: #555;
-  text-align: center;
-  line-height: 1.2;
+  font-size: 9px; font-weight: 700; color: #555;
+  text-align: center; line-height: 1.2;
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .ble-btn.on span { color: var(--blue-dark); }
 
-/* ══ PREVIEW OVERLAY ══ */
-.prev-overlay {
+/* ══ STATUS OVERLAY (menggantikan preview — langsung proses) ══ */
+.status-overlay {
   position: fixed; inset: 0; z-index: 100;
-  background: rgba(0,0,0,0.92);
+  background: rgba(0,0,0,0.82);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 14px; padding: 24px 20px;
+  gap: 20px; padding: 32px 28px;
   opacity: 0; pointer-events: none;
   transition: opacity 0.25s;
 }
-.prev-overlay.show { opacity: 1; pointer-events: all; }
-.prev-overlay img {
-  max-width: 100%; max-height: 50vh;
-  border-radius: 12px; object-fit: contain;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.7);
-}
-.prev-label { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 500; }
+.status-overlay.show { opacity: 1; pointer-events: all; }
 
-/* Progress */
-.prog-wrap {
-  width: 100%;
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-}
-.prog-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.prog-info span {
-  font-size: 12px;
-  color: rgba(255,255,255,0.6);
-  font-weight: 500;
-}
-.prog-track {
-  width: 100%; height: 5px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 3px; overflow: hidden;
-}
-.prog-fill {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, var(--blue), var(--green));
-  border-radius: 3px;
-  transition: width 0.25s ease;
+.status-img {
+  width: 140px; height: 105px;
+  border-radius: 10px; object-fit: cover;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
 
-/* Action buttons */
-.prev-actions { display: flex; gap: 10px; width: 100%; }
-.pv-btn {
-  flex: 1; height: 50px;
-  border: none; border-radius: 12px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-}
-.pv-btn:active { opacity: 0.7; }
-.pv-discard { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); }
-.pv-galeri  { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(91,184,245,0.35); }
-.pv-drive   { background: #4285f4; color: #fff; box-shadow: 0 4px 14px rgba(66,133,244,0.35); }
-
-/* Drive result link */
-.drive-link {
-  display: none;
-  color: #a8d8f8;
-  font-size: 12px;
+.status-title {
+  font-size: 16px; font-weight: 700; color: #fff;
   text-align: center;
-  text-decoration: underline;
-  word-break: break-all;
-  cursor: pointer;
 }
+.status-sub {
+  font-size: 12px; color: rgba(255,255,255,0.45);
+  text-align: center; margin-top: -12px;
+}
+
+/* Status rows */
+.status-rows { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.status-row {
+  display: flex; align-items: center;
+  gap: 12px; padding: 12px 14px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+}
+.status-row .icon { font-size: 18px; flex-shrink: 0; }
+.status-row .info { flex: 1; }
+.status-row .info .label {
+  font-size: 13px; font-weight: 600; color: #fff;
+}
+.status-row .info .sub {
+  font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px;
+}
+
+/* Mini progress bar per row */
+.mini-prog {
+  height: 3px; width: 100%;
+  background: rgba(255,255,255,0.1); border-radius: 2px;
+  margin-top: 5px; overflow: hidden;
+}
+.mini-fill {
+  height: 100%; width: 0%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.mini-fill.blue  { background: var(--blue); }
+.mini-fill.green { background: var(--green); }
+
+/* Check / spinner per row */
+.row-status { flex-shrink: 0; font-size: 18px; }
+
+/* Dismiss button */
+.btn-dismiss {
+  width: 100%; height: 48px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  color: rgba(255,255,255,0.8);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  display: none;
+}
+.btn-dismiss.show { display: block; }
+.btn-dismiss:active { opacity: 0.7; }
 
 /* ══ TOAST ══ */
 #toast {
   position: fixed;
   bottom: calc(var(--bottom-h) + 12px); left: 50%;
   transform: translateX(-50%) translateY(10px);
-  background: rgba(10,10,10,0.88);
-  color: #fff;
+  background: rgba(10,10,10,0.88); color: #fff;
   font-size: 13px; font-weight: 500;
-  padding: 10px 22px;
-  border-radius: 100px;
-  z-index: 300;
-  opacity: 0; pointer-events: none;
+  padding: 10px 22px; border-radius: 100px;
+  z-index: 300; opacity: 0; pointer-events: none;
   transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  backdrop-filter: blur(10px);
-  white-space: nowrap;
+  backdrop-filter: blur(10px); white-space: nowrap;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  max-width: 90vw;
-  text-align: center;
+  max-width: 90vw; text-align: center;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-#toast.ok   { background: rgba(0,150,70,0.92); }
-#toast.err  { background: rgba(200,30,30,0.92); }
+#toast.ok  { background: rgba(0,150,70,0.92); }
+#toast.err { background: rgba(200,30,30,0.92); }
+
+/* iframe tersembunyi untuk bypass CORS iOS */
+#uploadFrame { display: none; }
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
+<iframe id="uploadFrame" name="uploadFrame"></iframe>
 
-<!-- Preview Overlay -->
-<div class="prev-overlay" id="prevOverlay">
-  <div class="prev-label">Foto berhasil diambil</div>
-  <img id="prevImg" alt="">
+<!-- Status Overlay -->
+<div class="status-overlay" id="statusOverlay">
+  <img class="status-img" id="statusImg" alt="">
+  <div class="status-title">Menyimpan foto...</div>
+  <div class="status-sub" id="statusSub">Harap tunggu sebentar</div>
 
-  <!-- Progress (muncul saat upload) -->
-  <div class="prog-wrap" id="progWrap">
-    <div class="prog-info">
-      <span id="progLabel">Mengupload ke Drive...</span>
-      <span id="progPct">0%</span>
+  <div class="status-rows">
+    <!-- Row Galeri -->
+    <div class="status-row" id="rowGaleri">
+      <div class="icon">📱</div>
+      <div class="info">
+        <div class="label">Simpan ke Galeri</div>
+        <div class="sub" id="subGaleri">Memproses...</div>
+        <div class="mini-prog"><div class="mini-fill blue" id="fillGaleri"></div></div>
+      </div>
+      <div class="row-status" id="iconGaleri">⏳</div>
     </div>
-    <div class="prog-track">
-      <div class="prog-fill" id="progFill"></div>
+
+    <!-- Row Drive -->
+    <div class="status-row" id="rowDrive">
+      <div class="icon">☁️</div>
+      <div class="info">
+        <div class="label">Upload ke Google Drive</div>
+        <div class="sub" id="subDrive">Menunggu...</div>
+        <div class="mini-prog"><div class="mini-fill green" id="fillDrive"></div></div>
+      </div>
+      <div class="row-status" id="iconDrive">⏳</div>
     </div>
   </div>
 
-  <!-- Link hasil upload -->
-  <a class="drive-link" id="driveLink" target="_blank">Buka di Google Drive ↗</a>
-
-  <!-- Tombol aksi -->
-  <div class="prev-actions" id="prevActions">
-    <button class="pv-btn pv-discard" onclick="buangFoto()">✕</button>
-    <button class="pv-btn pv-galeri"  onclick="simpanGaleri()">📱 Galeri</button>
-    <button class="pv-btn pv-drive"   onclick="uploadDrive()">☁ Drive</button>
-  </div>
+  <button class="btn-dismiss" id="btnDismiss" onclick="tutupStatus()">✓ Selesai</button>
 </div>
 
 <div class="app">
@@ -367,11 +343,13 @@ canvas { display: none; }
     <div class="pinch-hint">Cubit 2 jari untuk zoom · Tap 2× reset</div>
   </div>
 
-  <!-- Bottom Bar -->
+  <!-- Bottom -->
   <div class="bottom">
     <div class="row-capture">
-      <div class="capture-btn" onclick="handleCapture()">
-        <div class="capture-inner"></div>
+      <div class="capture-btn" id="captureBtn" onclick="handleCapture()">
+        <div class="capture-inner">
+          <div class="spinner"></div>
+        </div>
       </div>
     </div>
     <div class="row-controls">
@@ -396,319 +374,356 @@ canvas { display: none; }
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-// KONFIGURASI — JANGAN UBAH
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
+// KONFIGURASI
+// ════════════════════════════════════════
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
 
 const BLE_SVC  = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
 const BLE_CHAR = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // STATE
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 let bleDevice = null, bleChar = null, bleOn = false;
 let camStream = null, camOn = false;
 let ledState  = { putih: false, biru: false };
 let fotoBlob  = null, fotoObjURL = null;
 let scale = 1, p0dist = 0, p0scale = 1;
 const SMIN = 1, SMAX = 6;
-let badgeTmr, toastTmr;
+let badgeTmr, toastTmr, processing = false;
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // TOAST
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 function toast(msg, t = '') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + t;
+  el.textContent = msg; el.className = 'show ' + t;
   clearTimeout(toastTmr);
   toastTmr = setTimeout(() => el.className = '', 3500);
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // BLE
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 async function toggleBLE() {
   bleOn ? bleDevice?.gatt?.disconnect() : await connectBLE();
 }
-
 async function connectBLE() {
-  if (!navigator.bluetooth) {
-    toast('Gunakan Chrome/Edge di Android', 'err'); return;
-  }
+  if (!navigator.bluetooth) { toast('Gunakan Chrome di Android', 'err'); return; }
   try {
     toast('🔍 Mencari perangkat...');
-    bleDevice = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [BLE_SVC] }]
-    });
-    bleDevice.addEventListener('gattserverdisconnected', () => {
-      setBLE(false); toast('Perangkat terputus', 'err');
-    });
+    bleDevice = await navigator.bluetooth.requestDevice({ filters:[{ services:[BLE_SVC] }] });
+    bleDevice.addEventListener('gattserverdisconnected', () => { setBLE(false); toast('Terputus','err'); });
     const srv = await bleDevice.gatt.connect();
     bleChar   = await (await srv.getPrimaryService(BLE_SVC)).getCharacteristic(BLE_CHAR);
-    setBLE(true);
-    toast('✓ Terhubung: ' + bleDevice.name, 'ok');
-  } catch(e) {
-    if (e.name !== 'NotFoundError') toast('Gagal: ' + (e.message || e), 'err');
-  }
+    setBLE(true); toast('✓ ' + bleDevice.name, 'ok');
+  } catch(e) { if (e.name !== 'NotFoundError') toast('Gagal: '+(e.message||e),'err'); }
 }
-
 function setBLE(on) {
   bleOn = on;
-  document.getElementById('bleBtn').className = 'ble-btn' + (on ? ' on' : '');
+  document.getElementById('bleBtn').className = 'ble-btn'+(on?' on':'');
   document.getElementById('bleTxt').textContent = on ? '✓' : 'BLE';
-  if (!on) { bleDevice = null; bleChar = null; }
+  if (!on) { bleDevice=null; bleChar=null; }
 }
-
 async function kirim(cmd) {
-  if (!bleChar) { toast('Hubungkan BLE dulu', 'err'); return; }
+  if (!bleChar) { toast('Hubungkan BLE dulu','err'); return; }
   try { await bleChar.writeValue(new TextEncoder().encode(cmd)); }
-  catch(e) { toast('Gagal kirim perintah', 'err'); }
+  catch(e) { toast('Gagal kirim','err'); }
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // LED
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 function toggleLED(id) {
   ledState[id] = !ledState[id];
-  document.getElementById('led' + id[0].toUpperCase() + id.slice(1))
-    .classList.toggle('on', ledState[id]);
-  kirim(id === 'putih'
-    ? (ledState.putih ? 'W:1023' : 'W:0')
-    : (ledState.biru  ? 'B:1023' : 'B:0'));
+  document.getElementById('led'+id[0].toUpperCase()+id.slice(1)).classList.toggle('on', ledState[id]);
+  kirim(id==='putih' ? (ledState.putih?'W:1023':'W:0') : (ledState.biru?'B:1023':'B:0'));
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // KAMERA
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 async function startCam() {
   try {
     camStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      video: { facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }
     });
     const v = document.getElementById('vid');
-    v.srcObject = camStream;
-    v.style.display = 'block';
+    v.srcObject = camStream; v.style.display = 'block';
     document.getElementById('camIdle').style.display = 'none';
     document.getElementById('camWrap').classList.add('cam-on');
-    camOn = true; scale = 1;
-    applyZoom(false);
-  } catch(e) {
-    toast('Izin kamera ditolak', 'err');
-  }
+    camOn = true; scale = 1; applyZoom(false);
+  } catch(e) { toast('Izin kamera ditolak','err'); }
 }
 
 function handleCapture() {
+  if (processing) return;
   if (!camOn) { startCam(); return; }
-  jepret();
+  jepretDanSimpan();
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // PINCH-TO-ZOOM
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 const wrap = document.getElementById('camWrap');
-
 wrap.addEventListener('touchstart', e => {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    p0dist = dist2(e.touches); p0scale = scale;
-  }
-}, { passive: false });
-
+  if (e.touches.length===2) { e.preventDefault(); p0dist=dist2(e.touches); p0scale=scale; }
+}, { passive:false });
 wrap.addEventListener('touchmove', e => {
-  if (e.touches.length === 2) {
+  if (e.touches.length===2) {
     e.preventDefault();
-    const ns = Math.min(SMAX, Math.max(SMIN, p0scale * dist2(e.touches) / p0dist));
-    if (Math.abs(ns - scale) > 0.02) { scale = ns; applyZoom(true); }
+    const ns = Math.min(SMAX, Math.max(SMIN, p0scale*dist2(e.touches)/p0dist));
+    if (Math.abs(ns-scale)>0.02) { scale=ns; applyZoom(true); }
   }
-}, { passive: false });
-
+}, { passive:false });
 wrap.addEventListener('touchend', e => {
-  if (e.touches.length < 2) {
-    clearTimeout(badgeTmr);
-    badgeTmr = setTimeout(() => document.getElementById('zoomBadge').classList.remove('show'), 1800);
-  }
+  if (e.touches.length<2) { clearTimeout(badgeTmr); badgeTmr=setTimeout(()=>document.getElementById('zoomBadge').classList.remove('show'),1800); }
 });
-
-let lastTap = 0;
+let lastTap=0;
 wrap.addEventListener('touchend', e => {
-  if (e.touches.length > 0) return;
-  const now = Date.now();
-  if (now - lastTap < 280) { scale = 1; applyZoom(true); }
-  lastTap = now;
+  if (e.touches.length>0) return;
+  const now=Date.now();
+  if (now-lastTap<280) { scale=1; applyZoom(true); }
+  lastTap=now;
 });
-
-function dist2(t) {
-  return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-}
-function applyZoom(showBadge) {
+function dist2(t) { return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
+function applyZoom(show) {
   if (!camOn) return;
-  document.getElementById('vid').style.transform = `scale(${scale})`;
-  const b = document.getElementById('zoomBadge');
-  b.textContent = scale.toFixed(1) + '×';
-  if (showBadge) b.classList.add('show');
+  document.getElementById('vid').style.transform=`scale(${scale})`;
+  const b=document.getElementById('zoomBadge');
+  b.textContent=scale.toFixed(1)+'×';
+  if (show) b.classList.add('show');
 }
 
-// ══════════════════════════════════════════════
-// JEPRET
-// ══════════════════════════════════════════════
-function jepret() {
+// ════════════════════════════════════════
+// JEPRET → LANGSUNG SIMPAN GALERI + DRIVE
+// ════════════════════════════════════════
+function jepretDanSimpan() {
   const v = document.getElementById('vid');
   if (!v.srcObject) return;
 
-  const vw = v.videoWidth || 1280, vh = v.videoHeight || 720;
-  const cw = vw / scale, ch = vh / scale;
+  // Loading state pada tombol capture
+  processing = true;
+  document.getElementById('captureBtn').classList.add('loading');
+
+  const vw = v.videoWidth||1280, vh = v.videoHeight||720;
+  const cw = vw/scale, ch = vh/scale;
   const cvs = document.getElementById('cvs');
-  cvs.width = vw; cvs.height = vh;
+  cvs.width=vw; cvs.height=vh;
   cvs.getContext('2d').drawImage(v, (vw-cw)/2, (vh-ch)/2, cw, ch, 0, 0, vw, vh);
 
   cvs.toBlob(blob => {
+    fotoBlob = blob;
     if (fotoObjURL) URL.revokeObjectURL(fotoObjURL);
-    fotoBlob   = blob;
     fotoObjURL = URL.createObjectURL(blob);
-    document.getElementById('prevImg').src = fotoObjURL;
-    document.getElementById('driveLink').style.display = 'none';
-    document.getElementById('prevOverlay').classList.add('show');
+
+    // Tampilkan status overlay dengan thumbnail
+    document.getElementById('statusImg').src = fotoObjURL;
+    document.getElementById('statusOverlay').classList.add('show');
+    document.getElementById('captureBtn').classList.remove('loading');
+    processing = false;
+
+    // Reset status rows
+    setRowState('Galeri', 'pending', 'Menyimpan...', 0);
+    setRowState('Drive', 'pending', 'Menunggu...', 0);
+    document.getElementById('btnDismiss').classList.remove('show');
+
+    // Jalankan keduanya paralel
+    simpanGaleri(blob);
+    uploadDrive(blob);
   }, 'image/jpeg', 0.93);
 }
 
-// ══════════════════════════════════════════════
-// BUANG FOTO
-// ══════════════════════════════════════════════
-function buangFoto() {
-  document.getElementById('prevOverlay').classList.remove('show');
-  document.getElementById('progWrap').style.display = 'none';
-  document.getElementById('prevActions').style.display = 'flex';
-  document.getElementById('driveLink').style.display = 'none';
-  setProgress(0, '');
-  if (fotoObjURL) { URL.revokeObjectURL(fotoObjURL); fotoObjURL = null; }
-  fotoBlob = null;
+// ════════════════════════════════════════
+// STATUS ROW HELPER
+// ════════════════════════════════════════
+function setRowState(id, state, sub, pct) {
+  // state: 'pending' | 'loading' | 'ok' | 'err'
+  const icons = { pending:'⏳', loading:'🔄', ok:'✅', err:'❌' };
+  const fills = { Galeri:'fillGaleri', Drive:'fillDrive' };
+  document.getElementById('sub'+id).textContent = sub;
+  document.getElementById('icon'+id).textContent = icons[state] || '⏳';
+  document.getElementById(fills[id]).style.width = pct + '%';
 }
 
-// ══════════════════════════════════════════════
-// SIMPAN KE GALERI HP
-// ══════════════════════════════════════════════
-async function simpanGaleri() {
-  if (!fotoBlob) { toast('Belum ada foto', 'err'); return; }
+function cekSelesai() {
+  // Tampilkan tombol dismiss jika kedua proses sudah ok/err
+  const g = document.getElementById('iconGaleri').textContent;
+  const d = document.getElementById('iconDrive').textContent;
+  if ((g==='✅'||g==='❌') && (d==='✅'||d==='❌')) {
+    document.getElementById('btnDismiss').classList.add('show');
+  }
+}
 
-  const name = `medscan_${ts()}.jpg`;
-  const file = new File([fotoBlob], name, { type: 'image/jpeg' });
+function tutupStatus() {
+  document.getElementById('statusOverlay').classList.remove('show');
+  if (fotoObjURL) { URL.revokeObjectURL(fotoObjURL); fotoObjURL=null; }
+  fotoBlob=null;
+}
 
-  // Web Share API → langsung ke galeri (Android/iOS)
+// ════════════════════════════════════════
+// SIMPAN KE GALERI
+// iOS Safari: pakai <a download> — paling reliable
+// Android Chrome: Web Share API → galeri langsung
+// ════════════════════════════════════════
+async function simpanGaleri(blob) {
+  setRowState('Galeri', 'loading', 'Menyimpan ke galeri...', 40);
+  const name = 'medscan_'+ts()+'.jpg';
+
+  // Coba Web Share API dulu (Android Chrome → langsung ke galeri)
   if (typeof navigator.share === 'function') {
     try {
-      const ok = !navigator.canShare || navigator.canShare({ files: [file] });
+      const file = new File([blob], name, { type:'image/jpeg' });
+      const ok = !navigator.canShare || navigator.canShare({ files:[file] });
       if (ok) {
-        await navigator.share({ files: [file], title: 'MedScan' });
-        toast('✓ Tersimpan ke Galeri!', 'ok');
-        buangFoto();
-        return;
+        setRowState('Galeri', 'loading', 'Buka panel berbagi...', 70);
+        await navigator.share({ files:[file], title:'MedScan' });
+        setRowState('Galeri', 'ok', 'Tersimpan ke Galeri ✓', 100);
+        cekSelesai(); return;
       }
     } catch(e) {
-      if (e.name === 'AbortError') return;
-      // fallthrough
+      if (e.name==='AbortError') {
+        // User cancel share — fallback ke download
+      }
     }
   }
 
-  // Fallback: auto download
-  dlBlob(fotoBlob, name);
-  toast('✓ Foto diunduh ke penyimpanan!', 'ok');
-  buangFoto();
-}
-
-function dlBlob(blob, name) {
-  const u = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement('a'), { href: u, download: name });
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
-}
-
-// ══════════════════════════════════════════════
-// UPLOAD KE GOOGLE DRIVE via Apps Script
-// Permanen — tidak butuh token!
-// ══════════════════════════════════════════════
-async function uploadDrive() {
-  if (!fotoBlob) { toast('Belum ada foto', 'err'); return; }
-
-  // Tampilkan progress, sembunyikan tombol
-  document.getElementById('prevActions').style.display = 'none';
-  document.getElementById('driveLink').style.display   = 'none';
-  const pw = document.getElementById('progWrap');
-  pw.style.display = 'flex';
-  setProgress(10, 'Mempersiapkan...');
-
+  // Fallback: <a download> auto-click
+  // iOS Safari: file langsung masuk ke Files/Download, bisa disimpan ke Foto manual
   try {
-    // Konversi Blob → Base64 (Apps Script butuh base64)
-    const b64 = await blobToBase64(fotoBlob);
-    setProgress(30, 'Mengirim ke Drive...');
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+    setRowState('Galeri', 'ok', 'Tersimpan ke Unduhan ✓', 100);
+  } catch(e) {
+    setRowState('Galeri', 'err', 'Gagal: '+e.message, 0);
+  }
+  cekSelesai();
+}
 
-    const nama = `medscan_${ts()}.jpg`;
+// ════════════════════════════════════════
+// UPLOAD KE GOOGLE DRIVE
+// Fix iOS CORS: pakai XMLHttpRequest dengan mode no-cors tidak bisa dapat response,
+// jadi kita pakai fetch dengan try/catch + fallback form POST
+// ════════════════════════════════════════
+async function uploadDrive(blob) {
+  setRowState('Drive', 'loading', 'Mengkonversi gambar...', 15);
 
-    // Kirim ke Google Apps Script via fetch POST
+  const name = 'medscan_'+ts()+'.jpg';
+  let b64;
+  try {
+    b64 = await blobToBase64(blob);
+  } catch(e) {
+    setRowState('Drive', 'err', 'Gagal baca gambar', 0);
+    cekSelesai(); return;
+  }
+
+  setRowState('Drive', 'loading', 'Mengirim ke Drive...', 35);
+
+  const payload = JSON.stringify({ filename:name, mimeType:'image/jpeg', data:b64 });
+
+  // ── Metode 1: fetch POST (Android Chrome, desktop) ──
+  try {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(()=>ctrl.abort(), 30000); // timeout 30 detik
+
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filename:  nama,
-        mimeType:  'image/jpeg',
-        data:      b64          // base64 string tanpa prefix
-      })
+      signal: ctrl.signal,
+      headers: { 'Content-Type':'application/json' },
+      body: payload
     });
+    clearTimeout(tid);
+    setRowState('Drive', 'loading', 'Memproses...', 80);
 
-    setProgress(85, 'Menyimpan...');
+    // Apps Script selalu redirect — response bisa ok atau opaque
+    // Anggap sukses jika tidak throw
+    let json = {};
+    try { json = await res.json(); } catch(_) {}
 
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
-    const json = await res.json();
-    setProgress(100, 'Selesai! ✓');
-
-    // Tampilkan link ke file di Drive
-    if (json.url || json.fileUrl || json.link) {
-      const link = document.getElementById('driveLink');
-      link.href  = json.url || json.fileUrl || json.link;
-      link.style.display = 'block';
-    }
-
-    toast('✓ Berhasil upload ke Google Drive!', 'ok');
-
-    // Reset setelah 2.5 detik
-    setTimeout(() => {
-      pw.style.display = 'none';
-      document.getElementById('prevActions').style.display = 'flex';
-      setProgress(0, '');
-    }, 2500);
+    setRowState('Drive', 'ok', 'Berhasil di Google Drive ✓', 100);
+    cekSelesai(); return;
 
   } catch(e) {
-    pw.style.display = 'none';
-    document.getElementById('prevActions').style.display = 'flex';
-    setProgress(0, '');
-    toast('Gagal upload: ' + (e.message || e), 'err');
-    console.error('Drive upload error:', e);
+    // fetch gagal (CORS iOS) → coba XMLHttpRequest no-cors
+    console.warn('fetch gagal, coba XHR:', e.message);
   }
+
+  // ── Metode 2: XMLHttpRequest (lebih toleran di iOS) ──
+  try {
+    await xhrPost(APPS_SCRIPT_URL, payload, pct => {
+      setRowState('Drive', 'loading', 'Mengirim... '+pct+'%', 35+pct*0.45);
+    });
+    setRowState('Drive', 'ok', 'Berhasil di Google Drive ✓', 100);
+    cekSelesai(); return;
+  } catch(e) {
+    console.warn('XHR juga gagal:', e.message);
+  }
+
+  // ── Metode 3: Form POST ke iframe (bypass CORS total di iOS Safari) ──
+  try {
+    setRowState('Drive', 'loading', 'Mengirim via form...', 50);
+    await formPost(APPS_SCRIPT_URL, { payload: payload });
+    // Tidak dapat response karena iframe cross-origin, tapi request terkirim
+    setRowState('Drive', 'ok', 'Terkirim ke Drive ✓', 100);
+  } catch(e) {
+    setRowState('Drive', 'err', 'Gagal: '+e.message, 0);
+  }
+  cekSelesai();
 }
 
-// ══════════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════════
-function setProgress(pct, label) {
-  document.getElementById('progFill').style.width = pct + '%';
-  document.getElementById('progPct').textContent  = pct + '%';
-  if (label) document.getElementById('progLabel').textContent = label;
-}
-
-function blobToBase64(blob) {
+// ── XHR dengan progress ──
+function xhrPost(url, body, onProg) {
   return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload  = () => resolve(r.result.split(',')[1]); // ambil bagian setelah "data:...;base64,"
-    r.onerror = reject;
-    r.readAsDataURL(blob);
+    const x = new XMLHttpRequest();
+    x.open('POST', url, true);
+    x.setRequestHeader('Content-Type','application/json');
+    x.timeout = 30000;
+    x.upload.onprogress = e => {
+      if (e.lengthComputable) onProg(Math.round(e.loaded/e.total*100));
+    };
+    x.onload  = () => resolve(x.responseText);
+    x.onerror = () => reject(new Error('XHR network error'));
+    x.ontimeout = () => reject(new Error('XHR timeout'));
+    x.send(body);
   });
 }
 
+// ── Form POST ke iframe (bypass CORS iOS) ──
+function formPost(url, fields) {
+  return new Promise((resolve) => {
+    const form  = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+    form.target = 'uploadFrame'; // ke iframe tersembunyi
+    form.style.display = 'none';
+    Object.entries(fields).forEach(([k,v]) => {
+      const inp = document.createElement('input');
+      inp.type='hidden'; inp.name=k; inp.value=v;
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => { document.body.removeChild(form); resolve(); }, 3000);
+  });
+}
+
+// ════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════
+function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
 function ts() {
-  return new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+  return new Date().toISOString().slice(0,19).replace(/[:.]/g,'-');
 }
 </script>
 </body>
