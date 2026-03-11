@@ -518,5 +518,32 @@ async function jepret() {
     }
 }
 </script>
+    <script>
+function simpanKeHP() {
+    // 1. Ambil data gambar dari elemen <img id="fotoMata">
+    const gambar = document.getElementById('fotoMata');
+    
+    // Kalau gambarnya belum ada/kosong, kasih peringatan
+    if (!gambar.src || gambar.src === "") {
+        alert("Belum ada foto yang diambil!");
+        return;
+    }
+
+    // 2. Bikin elemen link (<a>) "gaib" atau tak kasat mata
+    const link = document.createElement('a');
+    
+    // 3. Masukin data gambar ke link tersebut
+    link.href = gambar.src;
+    
+    // 4. Kasih nama file otomatis biar nggak nabrak (misal: Pasien_1709849.jpg)
+    const waktu = new Date().getTime();
+    link.download = 'Mata_Pasien_' + waktu + '.jpg';
+    
+    // 5. Eksekusi klik otomatis biar HP langsung nge-download!
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
 </body>
 </html>
