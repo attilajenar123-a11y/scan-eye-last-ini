@@ -1,619 +1,246 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ScanCornea</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Medis ESP32 - Final</title>
+    <style>
+        /* CSS Tampilan Web Kece & Profesional */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h2 { color: #333; margin-bottom: 5px; }
+        p.subtitle { color: #777; font-size: 14px; margin-top: 0; margin-bottom: 20px; }
+        
+        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); } 
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        
+        .btn-connect { background-color: #28a745; color: white; }
+        .btn-disconnect { background-color: #dc3545; color: white; display: none; }
+        .btn-blue { background-color: #007bff; color: white; }
+        .btn-white { background-color: #e2e6ea; color: #333; border: 1px solid #ccc; }
+        .btn-save { background-color: #ffc107; color: #333; }
+        
+        #status { margin: 15px 0; font-weight: bold; padding: 10px; border-radius: 5px; background-color: #e9ecef; color: #495057; }
+        
+        /* CSS Zoom & Kamera */
+        .image-container { margin: 20px 0; padding: 10px; border: 2px dashed #ccc; border-radius: 10px; background-color: #000; overflow: hidden; position: relative; }
+        video { width: 100%; max-width: 350px; border-radius: 8px; display: block; margin: auto; transform-origin: center center; transition: transform 0.2s ease-out; }
+        .zoom-control { margin: 15px 0; padding: 10px; background: #e9ecef; border-radius: 8px; text-align: left; }
+        .zoom-control input[type=range] { width: 100%; margin-top: 8px; }
 
-:root {
-  --white: #ffffff;
-  --gray: #d8dce2;
-  --blue: #5ab4f0;
-  --blue-ring: #a8d8f8;
-  --green: #0a9e6e;
-  --bottom-h: 160px;
-}
-
-html, body {
-  width: 100%; height: 100%;
-  overflow: hidden;
-  background: #f4f5f7;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-.app {
-  display: flex; flex-direction: column;
-  width: 100vw; height: 100dvh;
-}
-
-/* ══ CAMERA ══ */
-.cam-wrap {
-  flex: 1; position: relative;
-  background: #d0d4da; overflow: hidden;
-  touch-action: none;
-}
-.cam-wrap video {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transform-origin: center center;
-  will-change: transform;
-  pointer-events: none;
-}
-.cam-idle {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 12px; background: #d4d4d4;
-}
-.cam-idle svg { opacity: 0.35; }
-.cam-idle p { font-size: 14px; color: #888; font-weight: 500; }
-
-/* Crosshair */
-.crosshair-wrap {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  pointer-events: none; opacity: 0; transition: opacity 0.4s;
-}
-.cam-on .crosshair-wrap { opacity: 1; }
-.crosshair-ring {
-  width: 130px; height: 130px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.78);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
-  position: relative;
-}
-.crosshair-ring::before, .crosshair-ring::after {
-  content: ''; position: absolute; background: rgba(255,255,255,0.7);
-}
-.crosshair-ring::before { width: 1px; height: 22px; top: -26px; left: 50%; transform: translateX(-50%); }
-.crosshair-ring::after  { height: 1px; width: 22px; left: -26px; top: 50%; transform: translateY(-50%); }
-
-/* Flash */
-.flash-overlay {
-  position: absolute; inset: 0;
-  background: white; opacity: 0;
-  pointer-events: none; transition: opacity 0.05s;
-}
-.flash-overlay.flash { opacity: 0.85; }
-
-/* Upload pill */
-.upload-pill {
-  position: absolute; bottom: 14px; left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.58); color: white;
-  font-size: 13px; font-weight: 500;
-  padding: 7px 18px; border-radius: 99px;
-  opacity: 0; transition: opacity 0.3s;
-  pointer-events: none; white-space: nowrap;
-  backdrop-filter: blur(8px);
-  max-width: 90vw; text-align: center;
-}
-.upload-pill.show { opacity: 1; pointer-events: auto; }
-.upload-pill a { color: #7dd8f0; text-decoration: none; font-weight: 600; }
-
-/* Zoom badge */
-.zoom-badge {
-  position: absolute; top: 14px; right: 14px;
-  background: rgba(0,0,0,0.52); color: #fff;
-  font-size: 12px; font-weight: 700;
-  padding: 4px 12px; border-radius: 100px;
-  opacity: 0; transition: opacity 0.2s;
-  pointer-events: none; z-index: 5;
-  backdrop-filter: blur(4px);
-}
-.zoom-badge.show { opacity: 1; }
-
-/* BLE badge pojok kiri atas */
-.ble-badge {
-  position: absolute; top: 14px; left: 14px;
-  background: rgba(0,0,0,0.52); color: rgba(255,255,255,0.8);
-  font-size: 11px; font-weight: 600;
-  padding: 4px 12px; border-radius: 100px;
-  display: flex; align-items: center; gap: 6px;
-  pointer-events: none; z-index: 5;
-  backdrop-filter: blur(4px);
-}
-.ble-badge-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: rgba(255,255,255,0.35);
-  transition: background 0.3s;
-}
-.ble-badge.connected .ble-badge-dot {
-  background: #4ade80;
-  box-shadow: 0 0 0 2px rgba(74,222,128,0.3);
-  animation: pulseDot 2s infinite;
-}
-.ble-badge.connected { color: #c6f6d5; }
-
-/* Pinch hint */
-.pinch-hint {
-  position: absolute; bottom: 50px; left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.42); color: rgba(255,255,255,0.85);
-  font-size: 11px; padding: 5px 14px; border-radius: 100px;
-  pointer-events: none; white-space: nowrap; display: none;
-  backdrop-filter: blur(6px);
-}
-.cam-on .pinch-hint { display: block; animation: fadeHint 3s forwards 2.5s; }
-@keyframes fadeHint { to { opacity: 0; } }
-
-canvas { display: none; }
-
-/* ══ BOTTOM BAR ══ */
-.bottom {
-  height: var(--bottom-h);
-  background: var(--white);
-  border-top: 1.5px solid var(--gray);
-  display: flex; align-items: center;
-  justify-content: space-between;
-  padding: 18px 28px 36px; gap: 16px;
-  flex-shrink: 0;
-}
-
-/* LED Cards */
-.led-group { display: flex; gap: 10px; align-items: center; }
-.led-card {
-  cursor: pointer; user-select: none;
-  background: #f5f5f5; border: 1.5px solid #e0e0e0;
-  border-radius: 14px;
-  display: flex; flex-direction: column; align-items: center;
-  width: 62px; padding: 10px 0 8px; gap: 8px;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-.led-card:active { opacity: 0.75; }
-.led-card.on { background: #e8f4ff; border-color: #90c8f0; box-shadow: 0 0 10px rgba(90,170,240,0.25); }
-.led-card.disabled-card { opacity: 0.38; pointer-events: none; }
-.led-label { font-size: 13px; font-weight: 500; color: #444; display: none; }
-.led-bulb {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: #c8c8c8; border: 2px solid #b0b0b0;
-  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s; flex-shrink: 0;
-}
-.led-card.on .led-bulb.blue  { background: #5ab4f0; border-color: #3a9ae0; box-shadow: 0 0 10px rgba(90,180,240,0.85); }
-.led-card.on .led-bulb.white { background: #fff8d0; border-color: #d0c060; box-shadow: 0 0 12px rgba(255,240,140,0.95); }
-.led-toggle-track {
-  border-radius: 99px; background: #d0d0d0;
-  position: relative; transition: background 0.2s;
-  width: 36px; height: 20px;
-}
-.led-toggle-track::after {
-  content: ''; position: absolute; background: white; border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s;
-  width: 14px; height: 14px; top: 3px; left: 3px;
-}
-.led-card.on .led-toggle-track { background: #5ab4f0; }
-.led-card.on .led-toggle-track::after { transform: translateX(16px); }
-
-/* Capture Button */
-.capture-btn {
-  border-radius: 50%; background: var(--blue);
-  border: 4px solid white; outline: 3px solid var(--blue);
-  cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 0.1s, background 0.15s;
-  box-shadow: 0 4px 16px rgba(90,180,240,0.45);
-  width: 72px; height: 72px;
-}
-.capture-btn:active { transform: scale(0.91); background: #3a9ae0; }
-.capture-btn:disabled { background: #ccc; outline-color: #ccc; box-shadow: none; cursor: not-allowed; }
-
-/* BLE Connect Button (ganti WiFi) */
-.ble-btn {
-  cursor: pointer; background: #ebebeb;
-  border: 1.5px solid #d5d5d5;
-  transition: background 0.2s, border-color 0.2s;
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 5px;
-  width: 38px; border-radius: 12px;
-  padding: 12px 0; min-height: 68px; flex-shrink: 0;
-}
-.ble-btn:active { opacity: 0.75; }
-.ble-status-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #bbb; transition: background 0.3s, box-shadow 0.3s;
-}
-.ble-btn svg { opacity: 0.5; transition: opacity 0.2s; }
-.ble-btn-label { display: none; font-size: 14px; font-weight: 500; color: #444; }
-
-.ble-btn.connected  { background: #e8f9f2; border-color: #7dd8b5; }
-.ble-btn.connected .ble-status-dot { background: var(--green); box-shadow: 0 0 0 3px rgba(10,158,110,0.2); animation: pulseDot 2s infinite; }
-.ble-btn.connected svg { opacity: 0.85; }
-.ble-btn.connecting { background: #eff6ff; border-color: #93c5fd; }
-.ble-btn.connecting .ble-status-dot { background: #60a5fa; animation: pulseDot 0.8s infinite; }
-
-@keyframes pulseDot {
-  0%,100% { box-shadow: 0 0 0 3px rgba(10,158,110,0.25); }
-  50%      { box-shadow: 0 0 0 6px rgba(10,158,110,0.0); }
-}
-
-/* ══ DESKTOP ══ */
-@media (min-width: 768px) {
-  .bottom { padding: 20px 48px 24px; gap: 0; }
-  .led-card { width: 130px; padding: 14px 16px 12px; border-radius: 16px; gap: 10px; align-items: flex-start; }
-  .led-group { gap: 14px; }
-  .led-label { display: block; }
-  .led-bulb { width: 32px; height: 32px; }
-  .led-toggle-track { width: 48px; height: 26px; align-self: center; }
-  .led-toggle-track::after { width: 18px; height: 18px; top: 4px; left: 4px; }
-  .led-card.on .led-toggle-track::after { transform: translateX(22px); }
-  .capture-btn { width: 80px; height: 80px; }
-  .ble-btn { flex-direction: row; gap: 10px; width: auto; min-height: unset; padding: 14px 22px; border-radius: 10px; }
-  .ble-status-dot { width: 9px; height: 9px; }
-  .ble-btn-label { display: block; font-size: 15px; }
-  .ble-btn svg { display: none; }
-}
-
-/* ══ TOAST ══ */
-#toast {
-  position: fixed;
-  bottom: calc(var(--bottom-h) + 10px); left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: rgba(20,20,20,0.82); color: white;
-  padding: 10px 20px; border-radius: 99px; font-size: 13px;
-  white-space: nowrap; opacity: 0;
-  transition: opacity 0.2s, transform 0.2s;
-  pointer-events: none; z-index: 999;
-  backdrop-filter: blur(8px);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  max-width: 88vw; text-align: center;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-</style>
+        /* CSS Toast Notification (Anti Pause) */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+        #toast.show { visibility: visible; opacity: 1; }
+    </style>
 </head>
 <body>
 
-<div id="toast"></div>
+<div id="toast">Notifikasi muncul di sini</div>
 
-<div class="app">
+<div class="card">
+    <h2>👁️ Medis Scanner HD</h2>
+    <p class="subtitle">Kontrol Perangkat via Bluetooth</p>
 
-  <!-- Camera -->
-  <div class="cam-wrap" id="camWrap">
-    <video id="vid" autoplay playsinline muted></video>
-    <canvas id="cvs"></canvas>
+    <div id="status">🔴 Status: Belum Terhubung</div>
+    <button id="btnConnect" class="btn-connect" onclick="connectBLE()">🔗 Hubungkan Bluetooth</button>
+    <button id="btnDisconnect" class="btn-disconnect" onclick="disconnectBLE()">❌ Putuskan Koneksi</button>
 
-    <div class="cam-idle" id="camIdle">
-      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-        <circle cx="12" cy="13" r="4"/>
-      </svg>
-      <p>ScanCornea — Kamera belum aktif</p>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+    <h3 style="font-size: 16px; color: #555; text-align: left;">Kontrol Pencahayaan:</h3>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-blue" onclick="kirimPerintah('B:1023')">🔵 Biru ON</button>
+        <button class="btn-white" onclick="kirimPerintah('B:0')">⭕ Biru OFF</button>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-white" style="background-color: #f8f9fa; border-color: #999;" onclick="kirimPerintah('W:1023')">⚪ Putih ON</button>
+        <button class="btn-white" onclick="kirimPerintah('W:0')">⭕ Putih OFF</button>
     </div>
 
-    <div class="crosshair-wrap"><div class="crosshair-ring"></div></div>
-    <div class="flash-overlay" id="flashOverlay"></div>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
-    <!-- Badge BLE di pojok kiri atas -->
-    <div class="ble-badge" id="bleBadge">
-      <div class="ble-badge-dot"></div>
-      <span id="bleBadgeText">BLE</span>
+    <h3 style="font-size: 16px; color: #555; text-align: left;">Kamera Scanner:</h3>
+    <div class="image-container">
+        <video id="kameraMata" autoplay playsinline></video>
+        <canvas id="canvasFoto" style="display: none;"></canvas>
     </div>
 
-    <div class="zoom-badge" id="zoomBadge">1.0×</div>
-    <div class="pinch-hint">Cubit 2 jari untuk zoom · Tap 2× reset</div>
-    <div class="upload-pill" id="uploadPill"></div>
-  </div>
-
-  <!-- Bottom Bar -->
-  <div class="bottom">
-    <div class="led-group">
-      <div class="led-card disabled-card" id="cardBiru" onclick="toggleLED('B')">
-        <span class="led-label">LED Biru</span>
-        <div class="led-bulb blue"></div>
-        <div class="led-toggle-track"></div>
-      </div>
-      <div class="led-card disabled-card" id="cardPutih" onclick="toggleLED('W')">
-        <span class="led-label">LED Putih</span>
-        <div class="led-bulb white"></div>
-        <div class="led-toggle-track"></div>
-      </div>
+    <div class="zoom-control">
+        <label>🔍 Zoom: <span id="teksZoom">1.0x</span></label>
+        <input type="range" id="sliderZoom" min="1" max="3" step="0.1" value="1" oninput="aturZoom()">
     </div>
-
-    <button class="capture-btn" id="btnJepret" onclick="jepret()">
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-        <circle cx="12" cy="13" r="4"/>
-      </svg>
-    </button>
-
-    <!-- Tombol BLE (ganti WiFi) -->
-    <button class="ble-btn" id="btnBle" onclick="handleBle()">
-      <div class="ble-status-dot"></div>
-      <!-- Ikon Bluetooth -->
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:#555;">
-        <path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/>
-      </svg>
-      <span class="ble-btn-label" id="bleBtnLabel">Bluetooth</span>
-    </button>
-  </div>
-
+    
+    <button id="btnUpload" class="btn-save" onclick="jepretDanSimpan()">📸 Jepret & Simpan</button>
 </div>
 
 <script>
-// ════════════════════════════════════════════════
-// KONFIGURASI — UUID harus sama dengan ESP32
-// ════════════════════════════════════════════════
-const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
-const CHAR_UUID    = '12345678-1234-5678-1234-56789abcdef1';
-
-// URL Google Apps Script untuk upload foto ke Drive
-const DRIVE_URL = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
-
-// ════════════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════════════
-let bleDevice    = null;
-let bleChar      = null;
-let bleConnected = false;
-let ledState     = { B: false, W: false };
-let isUploading  = false;
-let kameraAktif  = false;
-let scale = 1, p0dist = 0, p0scale = 1;
-const SMIN = 1, SMAX = 6;
-let badgeTmr, toastTmr;
-
-// ════════════════════════════════════════════════
-// TOAST
-// ════════════════════════════════════════════════
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTmr);
-  toastTmr = setTimeout(() => el.classList.remove('show'), 2800);
-}
-
-// ════════════════════════════════════════════════
-// KAMERA — nyala otomatis
-// ════════════════════════════════════════════════
-const video   = document.getElementById('vid');
-const camWrap = document.getElementById('camWrap');
-
-async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-    });
-    video.srcObject = stream;
-    kameraAktif = true;
-    document.getElementById('camIdle').style.display = 'none';
-    camWrap.classList.add('cam-on');
-    scale = 1; applyZoom(false);
-  } catch {
-    showToast('Izinkan akses kamera di browser');
-  }
-}
-startCamera();
-
-// ════════════════════════════════════════════════
-// PINCH-TO-ZOOM
-// ════════════════════════════════════════════════
-camWrap.addEventListener('touchstart', e => {
-  if (e.touches.length === 2) { e.preventDefault(); p0dist = dist2(e.touches); p0scale = scale; }
-}, { passive: false });
-
-camWrap.addEventListener('touchmove', e => {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const ns = Math.min(SMAX, Math.max(SMIN, p0scale * dist2(e.touches) / p0dist));
-    if (Math.abs(ns - scale) > 0.02) { scale = ns; applyZoom(true); }
-  }
-}, { passive: false });
-
-camWrap.addEventListener('touchend', e => {
-  if (e.touches.length < 2) {
-    clearTimeout(badgeTmr);
-    badgeTmr = setTimeout(() => document.getElementById('zoomBadge').classList.remove('show'), 1800);
-  }
-});
-
-let lastTap = 0;
-camWrap.addEventListener('touchend', e => {
-  if (e.touches.length > 0) return;
-  const now = Date.now();
-  if (now - lastTap < 280) { scale = 1; applyZoom(true); }
-  lastTap = now;
-});
-
-function dist2(t) {
-  return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-}
-function applyZoom(show) {
-  video.style.transform = `scale(${scale})`;
-  const b = document.getElementById('zoomBadge');
-  b.textContent = scale.toFixed(1) + '×';
-  if (show) b.classList.add('show');
-}
-
-// ════════════════════════════════════════════════
-// BLUETOOTH — CONNECT / DISCONNECT
-// ════════════════════════════════════════════════
-async function handleBle() {
-  if (!navigator.bluetooth) {
-    showToast('Web Bluetooth tidak didukung. Gunakan Chrome Android.');
-    return;
-  }
-  if (bleConnected) {
-    // Sudah konek → tap lagi = putuskan
-    if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
-    return;
-  }
-  await connectBle();
-}
-
-async function connectBle() {
-  setBleState('connecting');
-  showToast('Mencari ESP32-Medis...');
-  try {
-    bleDevice = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }]
-    });
-    bleDevice.addEventListener('gattserverdisconnected', onBleDisconnected);
-
-    const server  = await bleDevice.gatt.connect();
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    bleChar        = await service.getCharacteristic(CHAR_UUID);
-
-    bleConnected = true;
-    setBleState('connected');
-    showToast('Terhubung ke ' + bleDevice.name);
-
-  } catch (e) {
-    bleConnected = false;
-    setBleState('idle');
-    if (e.name !== 'NotFoundError') showToast('BLE gagal: ' + e.message);
-    else showToast('Pencarian dibatalkan');
-  }
-}
-
-function onBleDisconnected() {
-  bleConnected = false;
-  bleChar      = null;
-  setBleState('idle');
-  // Reset LED state visual
-  ledState = { B: false, W: false };
-  document.getElementById('cardBiru').classList.remove('on');
-  document.getElementById('cardPutih').classList.remove('on');
-  showToast('Bluetooth terputus');
-}
-
-function setBleState(state) {
-  const btn    = document.getElementById('btnBle');
-  const badge  = document.getElementById('bleBadge');
-  const label  = document.getElementById('bleBtnLabel');
-  const cardB  = document.getElementById('cardBiru');
-  const cardW  = document.getElementById('cardPutih');
-
-  btn.classList.remove('connected', 'connecting');
-
-  if (state === 'connected') {
-    btn.classList.add('connected');
-    badge.classList.add('connected');
-    document.getElementById('bleBadgeText').textContent = bleDevice ? bleDevice.name : 'BLE';
-    label.textContent = 'Putuskan';
-    // Aktifkan LED card
-    cardB.classList.remove('disabled-card');
-    cardW.classList.remove('disabled-card');
-  } else if (state === 'connecting') {
-    btn.classList.add('connecting');
-    badge.classList.remove('connected');
-    document.getElementById('bleBadgeText').textContent = 'Menghubungkan...';
-    label.textContent = 'Menghubungkan...';
-    cardB.classList.add('disabled-card');
-    cardW.classList.add('disabled-card');
-  } else {
-    badge.classList.remove('connected');
-    document.getElementById('bleBadgeText').textContent = 'BLE';
-    label.textContent = 'Bluetooth';
-    cardB.classList.add('disabled-card');
-    cardW.classList.add('disabled-card');
-  }
-}
-
-// ════════════════════════════════════════════════
-// LED — kirim via BLE WRITE
-// ════════════════════════════════════════════════
-async function kirimLED(cmd) {
-  if (!bleChar) {
-    showToast('Sambungkan Bluetooth dulu');
-    return;
-  }
-  try {
-    const encoded = new TextEncoder().encode(cmd);
-    await bleChar.writeValue(encoded);
-  } catch (e) {
-    showToast('Kirim gagal: ' + e.message);
-    // Tandai terputus
-    onBleDisconnected();
-  }
-}
-
-function toggleLED(warna) {
-  if (!bleConnected) { showToast('Sambungkan Bluetooth dulu'); return; }
-  ledState[warna] = !ledState[warna];
-  const cardId = warna === 'B' ? 'cardBiru' : 'cardPutih';
-  document.getElementById(cardId).classList.toggle('on', ledState[warna]);
-  kirimLED(`${warna}:${ledState[warna] ? 1023 : 0}`);
-}
-
-// ════════════════════════════════════════════════
-// JEPRET + SIMPAN GALERI + UPLOAD DRIVE
-// ════════════════════════════════════════════════
-async function jepret() {
-  if (isUploading) return;
-  if (!kameraAktif || !video.videoWidth) {
-    await startCamera(); showToast('Kamera menyala, coba lagi'); return;
-  }
-
-  isUploading = true;
-  const btn   = document.getElementById('btnJepret');
-  const flash = document.getElementById('flashOverlay');
-  const pill  = document.getElementById('uploadPill');
-  btn.disabled = true;
-
-  // Flash
-  flash.classList.add('flash');
-  setTimeout(() => flash.classList.remove('flash'), 150);
-
-  // Capture dengan crop zoom
-  const canvas = document.getElementById('cvs');
-  const ctx    = canvas.getContext('2d');
-  const vw = video.videoWidth, vh = video.videoHeight;
-  const cw = vw / scale, ch = vh / scale;
-  canvas.width = vw; canvas.height = vh;
-  ctx.drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, vw, vh);
-
-  // ── Simpan ke Galeri HP ──
-  canvas.toBlob(blob => {
-    const name = 'medscan_' + ts() + '.jpg';
-    const file = new File([blob], name, { type: 'image/jpeg' });
-    if (typeof navigator.share === 'function') {
-      try {
-        const ok = !navigator.canShare || navigator.canShare({ files: [file] });
-        if (ok) { navigator.share({ files: [file], title: 'ScanCornea' }).catch(() => {}); return; }
-      } catch(_) {}
+    // ==========================================
+    // FUNGSI NOTIFIKASI MELAYANG (ANTI ALERT FREEZE)
+    // ==========================================
+    function tampilkanNotif(pesan) {
+        const toast = document.getElementById("toast");
+        toast.innerText = pesan;
+        toast.className = "show";
+        setTimeout(function() { toast.className = toast.className.replace("show", ""); }, 3500);
     }
-    const url = URL.createObjectURL(blob);
-    const a   = Object.assign(document.createElement('a'), { href: url, download: name });
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
-  }, 'image/jpeg', 0.93);
 
-  // ── Upload ke Google Drive ──
-  const imageData = canvas.toDataURL('image/jpeg', 0.92);
-  const payload   = { image: imageData.split(',')[1] };
+    // ==========================================
+    // LOGIKA ZOOM KAMERA
+    // ==========================================
+    let levelZoom = 1;
+    function aturZoom() {
+        levelZoom = document.getElementById('sliderZoom').value;
+        document.getElementById('teksZoom').innerText = levelZoom + "x";
+        document.getElementById('kameraMata').style.transform = `scale(${levelZoom})`;
+    }
 
-  pill.textContent = 'Menyimpan ke Drive...';
-  pill.classList.add('show');
+    // ==========================================
+    // LOGIKA KAMERA & SIMPAN 3 ALAM
+    // ==========================================
+    async function nyalakanKamera() {
+        try {
+            const video = document.getElementById('kameraMata');
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            console.error("Gagal akses kamera: ", err);
+            tampilkanNotif("⚠️ Kamera gagal dibuka! Cek izin browser.");
+        }
+    }
+    window.onload = nyalakanKamera;
 
-  try {
-    const res  = await fetch(DRIVE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // bypass CORS iOS
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.status !== 'ok') throw new Error(data.message || 'Drive error');
+    async function jepretDanSimpan() {
+        const video = document.getElementById('kameraMata');
+        const canvas = document.getElementById('canvasFoto');
+        const context = canvas.getContext('2d');
+        const btn = document.getElementById('btnUpload'); 
 
-    pill.innerHTML = `Tersimpan · <a href="${data.url}" target="_blank">Lihat di Drive</a>`;
-    showToast('Foto tersimpan ke Google Drive!');
-    setTimeout(() => pill.classList.remove('show'), 6000);
-  } catch (err) {
-    pill.textContent = 'Gagal: ' + err.message;
-    showToast('Upload gagal: ' + err.message);
-    setTimeout(() => pill.classList.remove('show'), 4000);
-  } finally {
-    isUploading  = false;
-    btn.disabled = false;
-    video.play();   // anti-freeze kamera setelah jepret
-  }
-}
+        if (!video.videoWidth) {
+            tampilkanNotif("⚠️ Kamera belum siap nih!");
+            return;
+        }
 
-function ts() {
-  return new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-}
+        btn.innerText = "⏳ Memproses...";
+        btn.disabled = true;
+
+        // Terapkan Zoom ke Canvas
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.translate(canvas.width / 2, canvas.height / 2); 
+        context.scale(levelZoom, levelZoom); 
+        context.translate(-canvas.width / 2, -canvas.height / 2); 
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Kompresi & Siapin Data
+        const dataURI = canvas.toDataURL('image/jpeg', 0.7);
+        const base64Data = dataURI.split(',')[1]; 
+        const namaFile = "Mata_Pasien_" + new Date().getTime() + ".jpg";
+        
+        // URL Jembatan Google Drive Kamu
+        const scriptURL = "https://script.google.com/macros/s/AKfycbyJgv5Osd4SEvGQF_JuIe0gH0TzTr74SZem_vCX82eBeXZCXckhL-nkGyvFf9rzKxEK/exec";
+
+        // 1. UPLOAD KE DRIVE DULU
+        try {
+            btn.innerText = "☁️ Uploading...";
+            const response = await fetch(scriptURL, {
+                method: "POST",
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ filename: namaFile, mimeType: "image/jpeg", base64: base64Data })
+            });
+            const result = await response.json();
+            if(result.status !== "success") {
+                tampilkanNotif("⚠️ Gagal upload ke Drive: " + result.message);
+            }
+        } catch (err) {
+            tampilkanNotif("⚠️ Gagal ngirim ke Drive! (Cek internet)");
+        }
+
+        // 2. SIMPAN KE LOKAL (YANG NANTI DITARIK KE LAPTOP)
+        btn.innerText = "💾 Menyimpan...";
+        const link = document.createElement('a');
+        link.href = dataURI;
+        link.download = namaFile;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        tampilkanNotif("✅ Sukses! Foto HD masuk Galeri & Drive.");
+
+        btn.innerText = "📸 Jepret & Simpan";
+        btn.disabled = false;
+        video.play(); // Anti-freeze kamera
+    }
+
+    // ==========================================
+    // LOGIKA BLUETOOTH (ESP32)
+    // ==========================================
+    const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0";
+    const CHAR_UUID = "12345678-1234-5678-1234-56789abcdef1";
+    let bleDevice, bleCharacteristic;
+
+    async function connectBLE() {
+        try {
+            updateStatus("🟡 Mencari perangkat...");
+            bleDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ name: "ESP32-Medis" }],
+                optionalServices: [SERVICE_UUID]
+            });
+            bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+            const server = await bleDevice.gatt.connect();
+            const service = await server.getPrimaryService(SERVICE_UUID);
+            bleCharacteristic = await service.getCharacteristic(CHAR_UUID);
+
+            updateStatus("🟢 Terhubung siap pakai!");
+            document.getElementById('btnConnect').style.display = 'none';
+            document.getElementById('btnDisconnect').style.display = 'block';
+            tampilkanNotif("🔗 Bluetooth Berhasil Terhubung!");
+        } catch (error) {
+            updateStatus("🔴 Gagal konek: " + error.message);
+        }
+    }
+
+    async function kirimPerintah(pesan) {
+        if (!bleCharacteristic) return tampilkanNotif("⚠️ Bluetooth belum terhubung!");
+        try {
+            await bleCharacteristic.writeValue(new TextEncoder().encode(pesan));
+        } catch (error) { tampilkanNotif("⚠️ Gagal ngirim perintah!"); }
+    }
+
+    function disconnectBLE() {
+        if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+    }
+
+    function onDisconnected() {
+        updateStatus("🔴 Terputus dari ESP32.");
+        bleCharacteristic = null;
+        document.getElementById('btnConnect').style.display = 'block';
+        document.getElementById('btnDisconnect').style.display = 'none';
+        tampilkanNotif("❌ Bluetooth Terputus!");
+    }
+
+    function updateStatus(pesan) { document.getElementById('status').innerText = pesan; }
 </script>
+
 </body>
 </html>
