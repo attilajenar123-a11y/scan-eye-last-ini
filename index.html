@@ -136,6 +136,43 @@ html, body {
 
 canvas { display: none; }
 
+/* Filter canvas overlay - real-time */
+#filterCanvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  display: none;
+}
+#filterCanvas.active { display: block; }
+
+/* Tombol filter kuning */
+.filter-btn {
+  position: absolute; bottom: 14px; right: 14px;
+  background: rgba(0,0,0,0.52);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.8);
+  font-size: 11px; font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s;
+  z-index: 5;
+}
+.filter-btn:active { opacity: 0.7; }
+.filter-btn.on {
+  background: rgba(234,179,8,0.35);
+  border-color: rgba(234,179,8,0.6);
+  color: #fef08a;
+}
+.filter-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transition: background 0.2s;
+}
+.filter-btn.on .filter-dot { background: #facc15; }
+
 /* ══ BOTTOM BAR ══ */
 .bottom {
   height: var(--bottom-h);
@@ -278,6 +315,11 @@ canvas { display: none; }
 
     <div class="zoom-badge" id="zoomBadge">1.0×</div>
     <div class="pinch-hint">Cubit 2 jari untuk zoom · Tap 2× reset</div>
+    <canvas id="filterCanvas"></canvas>
+    <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">
+      <div class="filter-dot"></div>
+      <span id="filterLabel">Filter</span>
+    </button>
     <div class="upload-pill" id="uploadPill"></div>
   </div>
 
@@ -324,6 +366,8 @@ const DRIVE_URL    = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9Q
 // STATE
 // ════════════════════════════════════════
 let bleDevice    = null;
+let filterOn     = false;
+let filterAnimId = null;
 let bleChar      = null;
 let isConnected  = false;
 let ledState     = { B: false, W: false };
@@ -402,6 +446,58 @@ function applyZoom(show) {
   const b = document.getElementById('zoomBadge');
   b.textContent = scale.toFixed(1) + '×';
   if (show) b.classList.add('show');
+}
+
+// ════════════════════════════════════════
+// FILTER KUNING — real-time via Canvas
+// ════════════════════════════════════════
+const filterCanvas = document.getElementById('filterCanvas');
+const filterCtx    = filterCanvas.getContext('2d');
+
+function toggleFilter() {
+  filterOn = !filterOn;
+  const btn   = document.getElementById('filterBtn');
+  const label = document.getElementById('filterLabel');
+  btn.classList.toggle('on', filterOn);
+  label.textContent = filterOn ? 'Filter ON' : 'Filter';
+
+  if (filterOn) {
+    filterCanvas.classList.add('active');
+    drawFilter();
+  } else {
+    filterCanvas.classList.remove('active');
+    cancelAnimationFrame(filterAnimId);
+  }
+}
+
+function drawFilter() {
+  // Samakan ukuran canvas filter dengan ukuran tampilan video
+  const w = filterCanvas.offsetWidth;
+  const h = filterCanvas.offsetHeight;
+  if (filterCanvas.width !== w || filterCanvas.height !== h) {
+    filterCanvas.width  = w;
+    filterCanvas.height = h;
+  }
+
+  // Gambar frame video ke filterCanvas
+  filterCtx.drawImage(video, 0, 0, w, h);
+
+  // Ambil pixel data
+  const imageData = filterCtx.getImageData(0, 0, w, h);
+  const d = imageData.data;
+
+  // Terapkan filter kuning (warm tone / jaundice)
+  // Naikkan R dan G, turunkan B — efek kuning keemasan
+  for (let i = 0; i < d.length; i += 4) {
+    d[i]     = Math.min(255, d[i]     * 1.15 + 15);  // R naik
+    d[i + 1] = Math.min(255, d[i + 1] * 1.05 + 10);  // G sedikit naik
+    d[i + 2] = Math.max(0,   d[i + 2] * 0.75 - 20);  // B turun
+  }
+
+  filterCtx.putImageData(imageData, 0, 0);
+
+  // Loop terus (real-time)
+  if (filterOn) filterAnimId = requestAnimationFrame(drawFilter);
 }
 
 // ════════════════════════════════════════
@@ -525,7 +621,15 @@ async function jepret() {
   const vw = video.videoWidth, vh = video.videoHeight;
   const cw = vw / scale, ch = vh / scale;
   canvas.width = vw; canvas.height = vh;
-  ctx.drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, vw, vh);
+  // Kalau filter aktif → ambil dari filterCanvas (sudah terproses)
+  if (filterOn && filterCanvas.classList.contains('active')) {
+    // Gambar ulang dengan ukuran penuh + zoom ke canvas capture
+    const fw = filterCanvas.width, fh = filterCanvas.height;
+    const fcw = fw / scale, fch = fh / scale;
+    ctx.drawImage(filterCanvas, (fw - fcw) / 2, (fh - fch) / 2, fcw, fch, 0, 0, vw, vh);
+  } else {
+    ctx.drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, vw, vh);
+  }
 
   // Simpan ke galeri HP
   canvas.toBlob(blob => {
