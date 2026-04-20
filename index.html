@@ -218,11 +218,22 @@ const video   = document.getElementById('vid');
 const camWrap = document.getElementById('camWrap');
 
 // ── Console mute ──
-console.log=console.warn=console.info=console.error=()=>{};
+console.log=console.warn=console.info=()=>{};
 
 // ── Auto retry kamera ──
 setTimeout(() => {
   if (!kameraAktif) startCamera();
+
+// Cek Web Bluetooth saat load
+window.addEventListener('load', () => {
+  if(!navigator.bluetooth){
+    const btn = document.getElementById('btnBle');
+    if(btn){
+      btn.title = 'Web Bluetooth tidak tersedia. Gunakan Bluefy (iPhone) atau Chrome Android';
+      btn.style.opacity = '0.5';
+    }
+  }
+});
 }, 2000);
 
 // ── OpenCV state ──
@@ -653,21 +664,41 @@ async function uploadBackground(imageB64,nama,pill){
 
 // ── BLE ──
 async function handleBle(){
-  if(!navigator.bluetooth){showToast('Gunakan Bluefy (iPhone) atau Chrome (Android)');return;}
-  if(isConnected){if(bleDevice&&bleDevice.gatt.connected)bleDevice.gatt.disconnect();return;}
-  setBleState('connecting'); showToast('Mencari ESP32-Medis...');
+  // Cek Web Bluetooth API tersedia
+  if(!navigator.bluetooth){
+    showToast('Pakai Bluefy (iPhone) / Chrome Android');
+    return;
+  }
+  // Jika sudah konek → putuskan
+  if(isConnected){
+    try{ if(bleDevice&&bleDevice.gatt.connected) bleDevice.gatt.disconnect(); }
+    catch(e){}
+    return;
+  }
+  setBleState('connecting');
+  showToast('Mencari ESP32-Medis...');
   try{
-    bleDevice=await navigator.bluetooth.requestDevice({filters:[{services:[SERVICE_UUID]}]});
-    bleDevice.addEventListener('gattserverdisconnected',onDisconnected);
-    const server=await bleDevice.gatt.connect();
-    const service=await server.getPrimaryService(SERVICE_UUID);
-    bleChar=await service.getCharacteristic(CHAR_UUID);
-    isConnected=true; setBleState('connected',bleDevice.name);
-    showToast('Terhubung ke '+bleDevice.name);
-  }catch(e){
+    // Request device dengan filter service UUID
+    bleDevice = await navigator.bluetooth.requestDevice({
+      filters:[{services:[SERVICE_UUID]}],
+      optionalServices:[SERVICE_UUID]
+    });
+    bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+    // Connect ke GATT server
+    const server  = await bleDevice.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+    bleChar       = await service.getCharacteristic(CHAR_UUID);
+    isConnected   = true;
+    setBleState('connected', bleDevice.name);
+    showToast('Terhubung: ' + bleDevice.name);
+  } catch(e){
     setBleState('idle');
-    if(e.name!=='NotFoundError')showToast('Gagal: '+e.message);
-    else showToast('Pencarian dibatalkan');
+    const msg = e.name === 'NotFoundError'    ? 'Pencarian dibatalkan' :
+                e.name === 'SecurityError'    ? 'Butuh HTTPS / Bluefy' :
+                e.name === 'NetworkError'     ? 'Gagal konek, coba lagi' :
+                e.name === 'NotSupportedError'? 'BLE tidak didukung perangkat ini' :
+                'Error: ' + e.message;
+    showToast(msg);
   }
 }
 
