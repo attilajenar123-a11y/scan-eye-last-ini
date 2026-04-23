@@ -15,7 +15,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#f4f5f7; font-f
 /* ── MODAL ── */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:flex-end; justify-content:center; z-index:9999; padding:0; backdrop-filter:blur(3px); }
 .modal-overlay.hidden { display:none; }
-.modal-box { background:white; border-radius:20px 20px 0 0; padding:20px 20px 36px; width:100%; max-width:100%; }
+.modal-box { background:white; border-radius:20px 20px 0 0; padding:20px 20px 40px; width:100%; max-width:100%; overflow:visible; -webkit-overflow-scrolling:touch; }
 .modal-title { font-size:16px; font-weight:700; margin-bottom:4px; }
 .modal-sub { font-size:12px; color:#888; margin-bottom:18px; }
 .modal-label { font-size:12px; font-weight:600; color:#444; margin-bottom:6px; display:block; }
@@ -24,7 +24,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#f4f5f7; font-f
 .mata-group { display:flex; gap:10px; margin-bottom:18px; }
 .mata-btn { flex:1; padding:10px; border:1.5px solid #e0e0e0; border-radius:10px; font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; background:#f9f9f9; color:#555; transition:all 0.2s; }
 .mata-btn.selected { background:#e8f4ff; border-color:#5ab4f0; color:#185FA5; }
-.modal-confirm { width:100%; padding:13px; background:#5ab4f0; color:white; border:none; border-radius:12px; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+.modal-confirm { width:100%; padding:16px; background:#5ab4f0; color:white; border:none; border-radius:12px; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; display:block; }
 .modal-confirm:active { transform:scale(0.98); }
 
 /* ── PATIENT BAR ── */
@@ -134,7 +134,7 @@ canvas { display:none; }
       <button class="mata-btn selected" id="btnOD" onclick="pilihMata('OD')">Kanan (OD)</button>
       <button class="mata-btn" id="btnOS" onclick="pilihMata('OS')">Kiri (OS)</button>
     </div>
-    <button class="modal-confirm" onclick="simpanFoto()">💾 Simpan ke Galeri</button>
+    <button class="modal-confirm" id="btnSimpan" onclick="simpanFoto()" type="button">💾 Simpan ke Galeri</button>
     <button onclick="batalSimpan()" style="width:100%;padding:10px;border:none;background:none;color:#888;font-size:13px;cursor:pointer;margin-top:8px;">Buang foto ini</button>
   </div>
 </div>
@@ -237,29 +237,42 @@ function tampilModalNama(blob,info){
 }
 
 function simpanFoto(){
-  if(!pendingBlob) return;
+  if(!pendingBlob){ showToast('Tidak ada foto'); return; }
   const nama=(document.getElementById('inputNama').value.trim())||'pasien';
   const namaFile=buatNamaFile(nama)+'.jpg';
   document.getElementById('modalOverlay').classList.add('hidden');
-  // Download langsung ke galeri tanpa pop up
-  const url=URL.createObjectURL(pendingBlob);
-  const a=Object.assign(document.createElement('a'),{href:url,download:namaFile});
-  a.style.display='none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },1000);
+
+  // Simpan referensi blob sebelum di-null
+  const blob = pendingBlob;
+  pendingBlob = null;
   fotoCounter++;
   document.getElementById('fotoCounter').textContent='Foto #'+fotoCounter;
-  showToast('✓ '+namaFile);
-  // Upload Drive background
-  const pill=document.getElementById('uploadPill');
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const b64=reader.result.split(',')[1];
-    uploadBackground(b64,namaFile,pill);
+
+  // Baca blob sebagai Data URL (base64)
+  const reader = new FileReader();
+  reader.onload = function() {
+    const dataUrl = reader.result;
+
+    // Coba download via link (bekerja di Chrome Android)
+    try {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = namaFile;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 500);
+      showToast('✓ Tersimpan: ' + namaFile);
+    } catch(e) {
+      showToast('Tap & hold gambar untuk simpan');
+    }
+
+    // Upload ke Drive di background
+    const b64 = dataUrl.split(',')[1];
+    const pill = document.getElementById('uploadPill');
+    uploadBackground(b64, namaFile, pill);
   };
-  reader.readAsDataURL(pendingBlob);
-  pendingBlob=null;
+  reader.readAsDataURL(blob);
 }
 
 function batalSimpan(){
