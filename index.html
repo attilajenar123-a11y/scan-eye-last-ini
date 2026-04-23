@@ -242,34 +242,58 @@ function simpanFoto(){
   const namaFile=buatNamaFile(nama)+'.jpg';
   document.getElementById('modalOverlay').classList.add('hidden');
 
-  // Simpan referensi blob sebelum di-null
   const blob = pendingBlob;
   pendingBlob = null;
   fotoCounter++;
   document.getElementById('fotoCounter').textContent='Foto #'+fotoCounter;
 
-  // Baca blob sebagai Data URL (base64)
   const reader = new FileReader();
   reader.onload = function() {
     const dataUrl = reader.result;
+    const b64 = dataUrl.split(',')[1];
+    const pill = document.getElementById('uploadPill');
 
-    // Coba download via link (bekerja di Chrome Android)
-    try {
+    // Deteksi iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+
+    if(isIOS) {
+      // iOS: navigator.share langsung tanpa pop up pilih app
+      // Share sheet muncul otomatis — user tinggal tap "Save Image"
+      try {
+        const file = new File([blob], namaFile, {type:'image/jpeg'});
+        if(navigator.canShare && navigator.canShare({files:[file]})) {
+          navigator.share({
+            files: [file],
+            title: 'ScanCornea',
+          }).then(()=>{
+            showToast('✓ Tersimpan ke galeri');
+          }).catch(e=>{
+            if(e.name!=='AbortError') showToast('Gagal: '+e.message);
+          });
+        } else {
+          // Fallback iOS: buka gambar di tab baru → user tap & tahan
+          const w = window.open();
+          w.document.write('<img src="'+dataUrl+'" style="width:100%;max-width:100%">');
+          w.document.title = namaFile;
+          showToast('Tahan gambar → Save to Photos');
+        }
+      } catch(e) {
+        showToast('Error: '+e.message);
+      }
+    } else {
+      // Android/Desktop: download langsung ke galeri tanpa pop up
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = namaFile;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => document.body.removeChild(a), 500);
-      showToast('✓ Tersimpan: ' + namaFile);
-    } catch(e) {
-      showToast('Tap & hold gambar untuk simpan');
+      setTimeout(()=> document.body.removeChild(a), 500);
+      showToast('✓ Tersimpan: '+namaFile);
     }
 
-    // Upload ke Drive di background
-    const b64 = dataUrl.split(',')[1];
-    const pill = document.getElementById('uploadPill');
+    // Upload ke Drive background (semua platform)
     uploadBackground(b64, namaFile, pill);
   };
   reader.readAsDataURL(blob);
