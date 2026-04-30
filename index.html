@@ -681,17 +681,34 @@ document.getElementById('modalSheet').addEventListener('click', e => {
 
 // ── Kamera ──
 async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}
-    });
-    vid.srcObject = stream;
-    kameraAktif = true;
-    document.getElementById('camIdle').style.display = 'none';
-    scale = 1; applyZoom();
-  } catch(e) {
-    toast('Izinkan akses kamera: ' + e.message);
+  // Stop stream lama jika ada
+  if (vid.srcObject) {
+    vid.srcObject.getTracks().forEach(t => t.stop());
+    vid.srcObject = null;
   }
+
+  const constraints = [
+    {video:{facingMode:{exact:'environment'}}},
+    {video:{facingMode:'environment'}},
+    {video:true}
+  ];
+
+  for (const c of constraints) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(c);
+      vid.srcObject = stream;
+      vid.onloadedmetadata = () => {
+        vid.play().catch(()=>{});
+        kameraAktif = true;
+        document.getElementById('camIdle').style.display = 'none';
+        scale = 1; applyZoom(false);
+      };
+      return;
+    } catch(e) {
+      // coba constraint berikutnya
+    }
+  }
+  toast('Kamera tidak bisa diakses');
 }
 startCamera();
 setTimeout(() => { if (!kameraAktif) startCamera(); }, 2500);
