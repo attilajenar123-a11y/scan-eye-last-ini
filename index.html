@@ -514,8 +514,30 @@ canvas { display:none; }
 // GANTI IP INI sesuai Serial Monitor ESP32
 // Contoh: '192.168.1.105' atau 'scancornea.local'
 let ESP32_IP  = 'scancornea.local'; // ← GANTI INI
-let ESP32_URL = 'http://' + ESP32_IP;
+let ESP32_IP  = localStorage.getItem('esp32_ip') || '';
+let ESP32_URL = ESP32_IP ? 'http://' + ESP32_IP : '';
 let wifiConnected = false;
+
+// ── JSONP helper — bypass mixed content HTTPS→HTTP ──
+function jsonpFetch(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '_jcb' + Date.now() + Math.floor(Math.random()*1000);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      cleanup(); reject(new Error('Timeout'));
+    }, 6000);
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cb];
+      if (script.parentNode) document.head.removeChild(script);
+    }
+    window[cb] = (data) => { cleanup(); resolve(data); };
+    script.src = url + (url.includes('?')?'&':'?') + 'cb=' + cb;
+    script.onerror = () => { cleanup(); reject(new Error('Network error')); };
+    document.head.appendChild(script);
+  });
+}
+
 
 const DRIVE_URL = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
 
@@ -871,27 +893,47 @@ async function handleBle() {
     return;
   }
 
-  // IP sudah di-set di konfigurasi atas
+  // Minta IP jika belum ada
+  if (!ESP32_IP) {
+    const ip = prompt(
+      'Masukkan IP ESP32\n(lihat di Serial Monitor Arduino)\n\nContoh: 192.168.1.105',
+      ''
+    );
+    if (!ip || !ip.trim()) return;
+    ESP32_IP  = ip.trim().replace(/^https?:\/\//,'');
+    ESP32_URL = 'http://' + ESP32_IP;
+    localStorage.setItem('esp32_ip', ESP32_IP);
+  }
 
   setWifi('connecting');
   toast('Menghubungi ESP32...');
+
   try {
-    const res = await fetch(ESP32_URL + '/api/status', {
-      mode:'cors', signal:AbortSignal.timeout(6000)
-    });
-    if (res.ok) {
-      isConnected = true;
-      const d = await res.json().catch(()=>({}));
-      const label = d.ip || ESP32_URL.replace('http://','');
-      setWifi('on', label);
-      toast('\u2713 Terhubung ke ESP32 (' + label + ')');
-    } else throw new Error('HTTP ' + res.status);
+    // Gunakan JSONP untuk bypass mixed content HTTPS→HTTP
+    const data = await jsonpFetch(ESP32_URL + '/api/status');
+    isConnected = true;
+    const label = data.ip || ESP32_IP;
+    setWifi('on', label);
+    toast('✓ Terhubung ke ESP32 (' + label + ')');
   } catch(e) {
+    // Fallback: coba fetch biasa (untuk Android Chrome dengan flag)
+    try {
+      const res = await fetch(ESP32_URL + '/api/status', {mode:'cors', signal:AbortSignal.timeout(5000)});
+      if (res.ok) {
+        const d = await res.json();
+        isConnected = true;
+        setWifi('on', d.ip || ESP32_IP);
+        toast('✓ Terhubung ke ESP32');
+        return;
+      }
+    } catch(_) {}
     setWifi('off');
-    toast('Gagal konek ke ESP32: ' + e.message + ' — cek IP di Serial Monitor');
+    ESP32_IP = '';
+    ESP32_URL = '';
+    localStorage.removeItem('esp32_ip');
+    toast('Gagal: pastikan HP dan ESP32 satu WiFi, lalu coba lagi');
   }
 }
-
 
 function setWifi(state, name) {
   const btn  = document.getElementById('btnBle');
@@ -917,13 +959,15 @@ function setWifi(state, name) {
 }
 
 async function kirimLED(cmd) {
-  if (!isConnected) return;
+  if (!isConnected || !ESP32_URL) return;
   try {
     const [pin, val] = cmd.split(':');
     const param  = pin==='B' ? 'b' : 'w';
     const val255 = Math.round(parseInt(val) / 4);
-    await fetch(ESP32_URL + '/api/led?' + param + '=' + val255, {mode:'cors', signal:AbortSignal.timeout(3000)});
-  } catch(e) { toast('LED gagal: '+e.message); }
+    // no-cors: bypass mixed content, tidak butuh response untuk LED
+    fetch(ESP32_URL + '/api/led?' + param + '=' + val255, {mode:'no-cors'})
+      .catch(()=>{});
+  } catch(e) {}
 }
 
 function toggleLED(w) {
@@ -944,20 +988,21 @@ async function esp32Fetch(path, opts={}) {
 
 // ── Kirim foto ke SD Card via BLE (chunked) ──
 async function kirimFotoKeSD(blob, namaFile) {
-  if (!isConnected) { toast('WiFi ESP32 tidak terhubung'); return false; }
+  if (!isConnected || !ESP32_URL) return false;
   toast('📤 Upload ke SD card...');
   try {
     const resizedBlob = await resizeTo128(blob);
     const form = new FormData();
     form.append('foto', resizedBlob, namaFile);
     form.append('nama', namaFile);
-    const res = await fetch(ESP32_URL + '/api/upload', {
-      method:'POST', body:form, mode:'cors',
-      signal:AbortSignal.timeout(15000)
-    });
-    if (res.ok) { toast('✓ Tersimpan di SD: ' + namaFile); return true; }
-    else { toast('Upload gagal: ' + res.status); return false; }
-  } catch(e) { toast('Upload error: ' + e.message); return false; }
+    // no-cors untuk bypass mixed content HTTPS→HTTP
+    // Upload berjalan background, tidak tunggu response
+    fetch(ESP32_URL + '/api/upload', {
+      method:'POST', body:form, mode:'no-cors'
+    }).then(() => toast('✓ Terkirim ke SD card'))
+      .catch(() => toast('Upload SD gagal'));
+    return true;
+  } catch(e) { return false; }
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1015,16 +1060,19 @@ async function bukaGaleri() {
   document.getElementById('galeriStrip').textContent = 'Menghubungi ESP32...';
 
   try {
-    const res  = await fetch(ESP32_URL + '/api/list', {mode:'cors', signal:AbortSignal.timeout(6000)});
-    const data = await res.json();
-    sdFotoList = data.map(f => f.nama);
+    // JSONP untuk bypass mixed content
+    let data;
+    try {
+      data = await jsonpFetch(ESP32_URL + '/api/list');
+    } catch(_) {
+      // Fallback fetch biasa (Android Chrome dengan flag)
+      const res = await fetch(ESP32_URL + '/api/list', {mode:'cors', signal:AbortSignal.timeout(6000)});
+      data = await res.json();
+    }
+    sdFotoList = Array.isArray(data) ? data.map(f => f.nama || f) : [];
     tampilGaleri();
   } catch(e) {
-    grid.innerHTML = `<div class="galeri-empty" style="grid-column:1/-1">
-      <div class="galeri-empty-icon">⚠️</div>
-      <div class="galeri-empty-text">Gagal memuat</div>
-      <div class="galeri-empty-sub">${e.message}</div>
-    </div>`;
+    grid.innerHTML = '<div class="galeri-empty" style="grid-column:1/-1"><div class="galeri-empty-icon">⚠️</div><div class="galeri-empty-text">Gagal memuat</div><div class="galeri-empty-sub">' + e.message + '</div></div>';
     document.getElementById('galeriStrip').textContent = 'Gagal terhubung ke SD card';
   }
 }
@@ -1086,17 +1134,27 @@ async function loadThumb(nama) {
   }
 }
 
-// Download foto dari SD via WiFi HTTP
-async function downloadFotoDariSD(nama) {
-  try {
-    // Ambil foto langsung sebagai blob URL
-    const res = await fetch(ESP32_URL + '/api/foto?f=' + encodeURIComponent(nama), {
-      mode:'cors', signal:AbortSignal.timeout(10000)
-    });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return URL.createObjectURL(blob); // return object URL
-  } catch(e) { return null; }
+// Load foto dari SD - pakai URL langsung (img src tidak kena mixed content)
+function downloadFotoDariSD(nama) {
+  return new Promise((resolve) => {
+    // Browser izinkan load <img src="http://..."> dari HTTPS page
+    const img = new Image();
+    const url = ESP32_URL + '/api/foto?f=' + encodeURIComponent(nama);
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Convert ke canvas lalu blob URL
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      resolve(c.toDataURL('image/jpeg', 0.9));
+    };
+    img.onerror = () => {
+      // Fallback: return URL langsung untuk display
+      resolve(url);
+    };
+    img.src = url;
+    setTimeout(() => resolve(url), 8000); // timeout fallback
+  });
 }
 
 // ── Lihat foto fullscreen ──
