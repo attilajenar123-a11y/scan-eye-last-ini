@@ -8,7 +8,7 @@
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-:root { --blue:#5ab4f0; --green:#0a9e6e; --gray:#d8dce2; --bottom-h:160px; }
+:root { --blue:#5ab4f0; --green:#0a9e6e; --gray:#d8dce2; --bottom-h:180px; }
 html,body { width:100%; height:100%; overflow:hidden; background:#1a1a1a; font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* ── MODAL BOTTOM SHEET ── */
@@ -95,35 +95,331 @@ video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; t
 .filter-btn.on { background:rgba(234,179,8,0.3); border-color:rgba(234,179,8,0.6); color:#fef08a; }
 .filter-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.4); }
 .filter-btn.on .filter-dot { background:#facc15; }
+.sheet-lampu { font-size:12px; color:#666; margin-bottom:14px; background:#f5f5f5; padding:8px 12px; border-radius:8px; }
+.sheet-lampu strong { color:#185FA5; }
 video.filter-on { filter:sepia(1) saturate(1.8) hue-rotate(5deg) brightness(1.05); }
 canvas { display:none; }
 @keyframes pulseDot { 0%,100%{box-shadow:0 0 0 3px rgba(74,222,128,0.25)} 50%{box-shadow:0 0 0 6px rgba(74,222,128,0)} }
 .ble-badge.on .ble-dot { animation:pulseDot 2s infinite; }
 
 /* ── BOTTOM BAR ── */
-.bottom { height:var(--bottom-h); background:white; border-top:1.5px solid var(--gray); display:flex; align-items:center; justify-content:space-between; padding:18px 28px 36px; gap:16px; flex-shrink:0; }
-.led-group { display:flex; gap:10px; }
-.led-card { cursor:pointer; background:#f5f5f5; border:1.5px solid #e0e0e0; border-radius:14px; display:flex; flex-direction:column; align-items:center; width:62px; padding:10px 0 8px; gap:8px; }
-.led-card.disabled { opacity:0.35; pointer-events:none; }
-.led-card.on { background:#e8f4ff; border-color:#90c8f0; }
-.led-bulb { width:26px; height:26px; border-radius:50%; background:#ccc; border:2px solid #bbb; }
-.led-card.on .led-bulb.blue { background:#5ab4f0; border-color:#3a9ae0; box-shadow:0 0 10px rgba(90,180,240,0.8); }
-.led-card.on .led-bulb.white { background:#fff8d0; border-color:#d0c060; box-shadow:0 0 12px rgba(255,240,140,0.9); }
-.led-toggle { width:36px; height:20px; border-radius:99px; background:#d0d0d0; position:relative; transition:background 0.2s; }
-.led-toggle::after { content:''; position:absolute; width:14px; height:14px; background:white; border-radius:50%; top:3px; left:3px; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
-.led-card.on .led-toggle { background:var(--blue); }
-.led-card.on .led-toggle::after { transform:translateX(16px); }
-.capture-btn { width:72px; height:72px; border-radius:50%; background:var(--blue); border:4px solid white; outline:3px solid var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(90,180,240,0.4); flex-shrink:0; }
-.capture-btn:active { transform:scale(0.91); background:#3a9ae0; }
-.ble-btn { cursor:pointer; background:#ebebeb; border:1.5px solid #d5d5d5; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:5px; width:38px; min-height:68px; flex-shrink:0; padding:12px 0; }
-.ble-btn-dot { width:8px; height:8px; border-radius:50%; background:#bbb; }
+.bottom {
+  height:var(--bottom-h);
+  background:white;
+  border-top:1px solid #e8e8e8;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 24px 32px;
+  gap:12px;
+  flex-shrink:0;
+  box-shadow:0 -2px 16px rgba(0,0,0,0.06);
+}
+
+/* ── LED GROUP ── */
+.led-group { display:flex; gap:16px; align-items:center; }
+
+/* LED Card — desain Figma: label atas, toggle horizontal, bulb di tengah */
+.led-card {
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  min-width:64px;
+  padding:8px 4px;
+  border-radius:16px;
+  transition:background 0.2s;
+  position:relative;
+}
+.led-card.disabled { opacity:0.32; pointer-events:none; }
+.led-card.on { background:rgba(90,180,240,0.08); }
+
+/* Label LED */
+.led-label {
+  font-size:11px;
+  font-weight:500;
+  color:#888;
+  letter-spacing:0.02em;
+  white-space:nowrap;
+}
+.led-card.on .led-label { color:#185FA5; }
+
+/* Bulb sesuai Figma — lingkaran dengan border */
+.led-bulb {
+  width:46px; height:46px;
+  border-radius:50%;
+  background:#d9d9d9;
+  border:none;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.25s;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);
+}
+.led-card.on .led-bulb.blue {
+  background:radial-gradient(circle at 40% 35%, #a0d8ff, #3a9ae0);
+  box-shadow:0 0 0 6px rgba(90,180,240,0.15), 0 0 20px rgba(90,180,240,0.5);
+}
+.led-card.on .led-bulb.white {
+  background:radial-gradient(circle at 40% 35%, #fffde0, #f0e080);
+  box-shadow:0 0 0 6px rgba(255,240,100,0.15), 0 0 20px rgba(255,240,80,0.6);
+}
+
+/* Toggle pill sesuai Figma */
+.led-toggle {
+  width:52px; height:28px;
+  border-radius:99px;
+  background:#b0b0b0;
+  position:relative;
+  transition:background 0.2s;
+  flex-shrink:0;
+  border:1.5px solid #999;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,0.15);
+}
+.led-toggle::after {
+  content:'';
+  position:absolute;
+  width:22px; height:22px;
+  background:white;
+  border-radius:50%;
+  top:2px; left:2px;
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:0 2px 6px rgba(0,0,0,0.3);
+}
+.led-card.on .led-toggle { background:var(--blue); border-color:var(--blue); }
+.led-card.on .led-toggle::after { transform:translateX(24px); }
+
+/* ── CAPTURE BTN sesuai Figma — besar, dominan ── */
+.capture-btn {
+  width:80px; height:80px;
+  border-radius:50%;
+  background:var(--blue);
+  border:5px solid white;
+  outline:3px solid var(--blue);
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 20px rgba(90,180,240,0.45);
+  flex-shrink:0;
+  transition:transform 0.1s, background 0.15s;
+}
+.capture-btn:active { transform:scale(0.9); background:#3a9ae0; }
+
+/* ── BLE BTN sesuai Figma ── */
+.ble-btn {
+  cursor:pointer;
+  background:#f0f0f0;
+  border:1.5px solid #e0e0e0;
+  border-radius:14px;
+  display:flex;
+  align-items:center; justify-content:center;
+  flex-direction:column;
+  gap:6px;
+  width:44px;
+  min-height:76px;
+  flex-shrink:0;
+  padding:14px 0;
+  transition:all 0.2s;
+}
+.ble-btn-dot { width:9px; height:9px; border-radius:50%; background:#bbb; transition:all 0.3s; }
 .ble-btn.connected { background:#e8f9f2; border-color:#7dd8b5; }
 .ble-btn.connected .ble-btn-dot { background:var(--green); animation:pulseDot 2s infinite; }
 .ble-btn.connecting .ble-btn-dot { background:#60a5fa; animation:pulseDot 0.8s infinite; }
 
+/* Responsive — desktop lebih besar */
+@media(min-width:768px) {
+  :root { --bottom-h:200px; }
+  .bottom { padding:24px 60px 40px; }
+  .led-card { min-width:80px; }
+  .led-bulb { width:56px; height:56px; }
+  .led-toggle { width:60px; height:32px; }
+  .led-toggle::after { width:26px; height:26px; }
+  .led-card.on .led-toggle::after { transform:translateX(28px); }
+  .capture-btn { width:100px; height:100px; }
+  .ble-btn { width:52px; min-height:88px; }
+}
+
 /* toast */
 #toast { position:fixed; bottom:calc(var(--bottom-h) + 10px); left:50%; transform:translateX(-50%) translateY(8px); background:rgba(20,20,20,0.85); color:white; padding:10px 20px; border-radius:99px; font-size:13px; white-space:nowrap; opacity:0; transition:opacity 0.2s,transform 0.2s; pointer-events:none; z-index:9999; max-width:88vw; text-align:center; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════
+   GALERI SD CARD — tampilan seperti galeri HP
+   ══════════════════════════════════ */
+#galeriPanel {
+  position:fixed; inset:0; z-index:9000;
+  display:flex; flex-direction:column;
+  background:#000;
+}
+#galeriPanel.hidden { display:none; }
+
+/* Status bar galeri */
+.galeri-statusbar {
+  background:#1c1c1e;
+  padding:52px 16px 0;
+  display:flex; align-items:center; gap:12px;
+  flex-shrink:0;
+}
+.galeri-back {
+  border:none; background:none; color:#0a84ff;
+  font-size:17px; cursor:pointer; padding:8px 0;
+  display:flex; align-items:center; gap:4px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.galeri-title-bar {
+  flex:1; text-align:center;
+  color:white; font-size:17px; font-weight:600;
+}
+.galeri-refresh {
+  border:none; background:none; color:#0a84ff;
+  font-size:15px; cursor:pointer; padding:8px 0;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+
+/* Info strip */
+.galeri-strip {
+  background:#1c1c1e; color:#8e8e93;
+  font-size:12px; text-align:center;
+  padding:8px 16px 12px;
+  border-bottom:0.5px solid #38383a;
+  flex-shrink:0;
+}
+
+/* Loading state */
+.galeri-loading {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:12px;
+  color:#8e8e93; font-size:14px;
+}
+.galeri-spinner {
+  width:32px; height:32px; border-radius:50%;
+  border:3px solid #38383a; border-top-color:#0a84ff;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Grid foto — 3 kolom rapat seperti galeri iOS */
+#galeriGrid {
+  flex:1; overflow-y:auto;
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:2px;
+  background:#000;
+  align-content:start;
+  -webkit-overflow-scrolling:touch;
+}
+
+.galeri-thumb {
+  aspect-ratio:1;
+  background:#1c1c1e;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+}
+.galeri-thumb img {
+  width:100%; height:100%;
+  object-fit:cover; display:block;
+  transition:opacity 0.2s;
+}
+.galeri-thumb img.loading { opacity:0; }
+.galeri-thumb img.loaded  { opacity:1; }
+
+/* Placeholder saat loading thumbnail */
+.thumb-loading-indicator {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  background:#1c1c1e;
+}
+.thumb-loading-indicator::after {
+  content:''; width:20px; height:20px; border-radius:50%;
+  border:2px solid #38383a; border-top-color:#8e8e93;
+  animation:spin 0.8s linear infinite;
+}
+
+/* Nama file di bawah thumbnail */
+.thumb-label {
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(transparent, rgba(0,0,0,0.7));
+  color:white; font-size:8px; padding:10px 4px 4px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Empty state */
+.galeri-empty {
+  grid-column:1/-1;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:80px 20px; gap:12px; color:#8e8e93;
+}
+.galeri-empty-icon { font-size:48px; opacity:0.5; }
+.galeri-empty-text { font-size:16px; font-weight:500; color:#6e6e73; }
+.galeri-empty-sub  { font-size:13px; color:#48484a; text-align:center; }
+
+/* ══ MODAL FULLSCREEN FOTO ══ */
+#fotoModal {
+  position:fixed; inset:0; z-index:99000;
+  background:black;
+  display:flex; flex-direction:column;
+}
+#fotoModal.hidden { display:none; }
+
+.foto-modal-nav {
+  position:absolute; top:0; left:0; right:0; z-index:2;
+  display:flex; align-items:center; padding:52px 16px 12px;
+  background:linear-gradient(rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+.foto-modal-back {
+  border:none; background:none; color:white;
+  font-size:17px; cursor:pointer; padding:4px 0;
+  display:flex; align-items:center; gap:4px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.foto-modal-name {
+  flex:1; color:white; font-size:13px;
+  text-align:center; opacity:0.8;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin:0 8px;
+}
+.foto-modal-del {
+  border:none; background:none; color:#ff453a;
+  font-size:15px; cursor:pointer; padding:4px 0;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+
+/* Foto viewer — tengah */
+.foto-modal-viewer {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  overflow:hidden; touch-action:pinch-zoom;
+}
+.foto-modal-viewer img {
+  max-width:100%; max-height:100%;
+  object-fit:contain;
+}
+
+/* Bottom bar foto modal */
+.foto-modal-bottom {
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(transparent, rgba(0,0,0,0.8));
+  padding:20px 20px 44px;
+  display:flex; justify-content:center; gap:40px;
+}
+.foto-modal-btn {
+  border:none; background:none; color:white;
+  display:flex; flex-direction:column; align-items:center;
+  gap:4px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;
+}
+.foto-modal-btn span { font-size:11px; opacity:0.7; }
+.foto-modal-btn svg { opacity:0.9; }
+
+/* Indikator loading foto fullscreen */
+.foto-modal-spinner {
+  width:40px; height:40px; border-radius:50%;
+  border:3px solid rgba(255,255,255,0.2);
+  border-top-color:white;
+  animation:spin 0.8s linear infinite;
+}
+
+/* Tombol galeri di kamera */
+.btn-galeri { position:absolute; top:14px; right:60px; background:rgba(0,0,0,0.5); border:none; border-radius:99px; color:white; font-size:11px; font-weight:600; padding:5px 12px; cursor:pointer; z-index:5; display:flex; align-items:center; gap:5px; }
+.btn-galeri.hidden { display:none; }
 </style>
 </head>
 <body>
@@ -137,13 +433,9 @@ canvas { display:none; }
     <div class="sheet-handle"></div>
     <div class="sheet-title">Beri nama foto</div>
     <div class="sheet-sub normal" id="sheetInfo">Foto berhasil diambil</div>
+    <div class="sheet-lampu" id="sheetLampu">💡 Lampu: <strong id="sheetLampuVal">—</strong></div>
     <label class="sheet-label">Nama Pasien</label>
     <input class="sheet-input" id="inputNama" type="text" placeholder="Contoh: Budi Santoso" autocomplete="off"/>
-    <label class="sheet-label">Pilih Mata</label>
-    <div class="mata-row">
-      <button class="mata-btn active" id="btnOD" onclick="pilihMata('OD')">Kanan (OD)</button>
-      <button class="mata-btn" id="btnOS" onclick="pilihMata('OS')">Kiri (OS)</button>
-    </div>
     <button class="btn-save" onclick="simpanFoto()">Simpan ke Galeri</button>
     <button class="btn-discard" onclick="batalFoto()">Buang foto ini</button>
   </div>
@@ -172,29 +464,39 @@ canvas { display:none; }
     <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">
       <div class="filter-dot"></div><span id="filterLabel">Filter</span>
     </button>
+    <button class="btn-galeri hidden" id="btnGaleri" onclick="bukaGaleri()">📁 SD Card</button>
   </div>
 
-  <!-- BOTTOM BAR -->
+  <!-- BOTTOM BAR — sesuai desain Figma -->
   <div class="bottom">
+    <!-- LED Controls -->
     <div class="led-group">
+      <!-- LED Biru -->
       <div class="led-card disabled" id="cardBiru" onclick="toggleLED('B')">
+        <span class="led-label">LED Biru</span>
         <div class="led-bulb blue"></div>
         <div class="led-toggle"></div>
       </div>
+      <!-- LED Putih -->
       <div class="led-card disabled" id="cardPutih" onclick="toggleLED('W')">
+        <span class="led-label">LED Putih</span>
         <div class="led-bulb white"></div>
         <div class="led-toggle"></div>
       </div>
     </div>
+
+    <!-- Tombol Capture — dominan di tengah -->
     <button class="capture-btn" id="btnJepret" onclick="jepret()">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
         <circle cx="12" cy="13" r="4"/>
       </svg>
     </button>
+
+    <!-- BLE Button -->
     <button class="ble-btn" id="btnBle" onclick="handleBle()">
       <div class="ble-btn-dot"></div>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="#555">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#666">
         <path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/>
       </svg>
     </button>
@@ -205,16 +507,22 @@ canvas { display:none; }
 'use strict';
 
 // ── Config ──
-const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
-const CHAR_UUID    = '12345678-1234-5678-1234-56789abcdef1';
-const DRIVE_URL    = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
+// ── WiFi ESP32 Config ──
+// Ganti IP ini jika berbeda (cek Serial Monitor ESP32)
+let ESP32_IP   = '192.168.4.1';
+let ESP32_URL  = 'http://' + ESP32_IP;
+let wifiConnected = false;
+
+const DRIVE_URL = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
 
 // ── State ──
 let kameraAktif=false, scale=1, p0dist=0, p0scale=1;
 let filterOn=false;
-let bleDevice=null, bleChar=null, isConnected=false;
+let isConnected=false;     // WiFi ESP32 terhubung
 let ledState={B:false, W:false};
-let mataPasien='OD', fotoCounter=1;
+let sdFotoList=[];
+let galeriOpen=false;
+let fotoCounter=1;
 let pendingBlob=null;
 let cvReady=false;
 let toastTimer;
@@ -231,23 +539,22 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-// ── Pilih mata ──
-function pilihMata(m) {
-  mataPasien = m;
-  document.getElementById('btnOD').classList.toggle('active', m==='OD');
-  document.getElementById('btnOS').classList.toggle('active', m==='OS');
-}
+
 
 // ── Buat nama file ──
+// Format: tahun_jam-menit_lampu_nama_nomor
+// lampu: putih / biru / putih-biru / nolampu
 function buatNama(nama) {
-  const d = new Date();
-  const thn  = d.getFullYear();
-  const jam  = String(d.getHours()).padStart(2,'0');
-  const mnt  = String(d.getMinutes()).padStart(2,'0');
-  const mata = mataPasien==='OD' ? 'kanan' : 'kiri';
-  const n    = (nama||'pasien').replace(/[^a-zA-Z0-9 ]/g,'').trim().toLowerCase().replace(/ +/g,'_') || 'pasien';
-  const no   = String(fotoCounter).padStart(3,'0');
-  return `${thn}_${jam}-${mnt}_${mata}_${n}_${no}`;
+  const d   = new Date();
+  const thn = d.getFullYear();
+  const bln = String(d.getMonth()+1).padStart(2,'0');
+  const tgl = String(d.getDate()).padStart(2,'0');
+  const jam = String(d.getHours()).padStart(2,'0');
+  const mnt = String(d.getMinutes()).padStart(2,'0');
+  const dtk = String(d.getSeconds()).padStart(2,'0');
+  const n  = (nama||'pasien').replace(/[^a-zA-Z0-9 ]/g,'').trim().toLowerCase().replace(/ +/g,'_') || 'pasien';
+  const no = String(fotoCounter).padStart(3,'0');
+  return `${thn}_${bln}_${tgl}_${jam}-${mnt}-${dtk}_${n}_${no}`;
 }
 
 // ── Modal bottom sheet ──
@@ -256,6 +563,13 @@ function bukaModal(blob, info) {
   document.getElementById('inputNama').value = '';
   document.getElementById('sheetInfo').textContent = info || 'Foto berhasil diambil';
   document.getElementById('sheetInfo').className = info && info.includes('terdeteksi') ? 'sheet-sub' : 'sheet-sub normal';
+  // Tampilkan info lampu yang aktif saat foto diambil
+  const biru  = ledState.B;
+  const putih = ledState.W;
+  const infoLampu = (biru && putih) ? 'Putih + Biru' :
+                     biru            ? 'Biru'          :
+                     putih           ? 'Putih'         : 'Tidak ada';
+  document.getElementById('sheetLampuVal').textContent = infoLampu;
   document.getElementById('modalSheet').classList.add('show');
   setTimeout(() => document.getElementById('inputNama').focus(), 400);
 }
@@ -289,8 +603,10 @@ function simpanFoto() {
       // iOS: gunakan navigator.share — share sheet muncul otomatis
       const file = new File([blob], namaFile, {type:'image/jpeg'});
       if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+        // Tampilkan petunjuk bersamaan dengan share sheet
+        setTimeout(() => toast('👇 Tap "Save Image" untuk simpan'), 600);
         navigator.share({files:[file], title:'ScanCornea'})
-          .then(() => toast('✓ Tersimpan!'))
+          .then(() => toast('✓ Tersimpan ke galeri!'))
           .catch(e => { if (e.name !== 'AbortError') toast('Gagal: ' + e.message); });
       } else {
         // Fallback: buka di tab baru, user tahan untuk simpan
@@ -310,7 +626,13 @@ function simpanFoto() {
       toast('✓ Tersimpan: ' + namaFile);
     }
 
+    // Auto upload Drive
     uploadBg(b64, namaFile, pill);
+
+    // Kirim ke SD card via BLE (background, jika terhubung)
+    if (isConnected && bleChar) {
+      setTimeout(() => kirimFotoKeSD(blob, namaFile), 800);
+    }
   };
   reader.readAsDataURL(blob);
 }
@@ -533,65 +855,347 @@ async function uploadBg(b64, nama, pill) {
   }
 }
 
-// ── BLE ──
+// ── WiFi ESP32 ──
 async function handleBle() {
   if (isConnected) {
-    try { bleDevice && bleDevice.gatt.disconnect(); } catch(e) {}
+    isConnected = false;
+    setWifi('off');
+    ledState = {B:false,W:false};
+    document.getElementById('cardBiru').classList.remove('on');
+    document.getElementById('cardPutih').classList.remove('on');
+    toast('Terputus dari ESP32');
     return;
   }
-  const bt = navigator.bluetooth || window.bluetooth;
-  if (!bt) { toast('Pakai Bluefy (iPhone) atau Chrome Android'); return; }
-  setBle('connecting');
-  toast('Mencari ESP32-Medis...');
+  setWifi('connecting');
+  toast('Menghubungi ESP32...');
   try {
-    bleDevice = await bt.requestDevice({filters:[{name:'ESP32-Medis'},{services:[SERVICE_UUID]}]});
-    bleDevice.addEventListener('gattserverdisconnected', onBleDisconnect);
-    const server  = await bleDevice.gatt.connect();
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    bleChar = await service.getCharacteristic(CHAR_UUID);
-    isConnected = true;
-    setBle('on', bleDevice.name);
-    toast('Terhubung: ' + bleDevice.name);
+    const res = await fetch(ESP32_URL + '/', {mode:'cors', signal:AbortSignal.timeout(5000)});
+    if (res.ok) {
+      isConnected = true;
+      setWifi('on', 'ScanCornea-AP');
+      toast('✓ Terhubung ke ESP32 WiFi');
+    } else throw new Error('Status: ' + res.status);
   } catch(e) {
-    setBle('off');
-    const msg = e.name==='NotFoundError' ? 'Pencarian dibatalkan' :
-                e.name==='SecurityError' ? 'Butuh HTTPS' :
-                'Error: ' + (e.message||e.name);
-    toast(msg);
+    setWifi('off');
+    toast('Gagal — konek ke WiFi "ScanCornea-AP" dulu');
   }
 }
 
-function onBleDisconnect() {
-  isConnected = false; bleChar = null; ledState = {B:false,W:false};
-  document.getElementById('cardBiru').classList.remove('on');
-  document.getElementById('cardPutih').classList.remove('on');
-  setBle('off'); toast('Bluetooth terputus');
-}
-
-function setBle(state, name) {
-  const btn   = document.getElementById('btnBle');
-  const badge = document.getElementById('bleBadge');
-  const txt   = document.getElementById('bleText');
-  const cB    = document.getElementById('cardBiru');
-  const cW    = document.getElementById('cardPutih');
+function setWifi(state, name) {
+  const btn  = document.getElementById('btnBle');
+  const badge= document.getElementById('bleBadge');
+  const txt  = document.getElementById('bleText');
+  const cB   = document.getElementById('cardBiru');
+  const cW   = document.getElementById('cardPutih');
   btn.classList.remove('connected','connecting');
   badge.classList.remove('on');
   if (state==='on') {
-    btn.classList.add('connected');
-    badge.classList.add('on');
-    txt.textContent = name||'Terhubung';
-    cB.classList.remove('disabled');
-    cW.classList.remove('disabled');
+    btn.classList.add('connected'); badge.classList.add('on');
+    txt.textContent = name||'WiFi';
+    cB.classList.remove('disabled'); cW.classList.remove('disabled');
+    document.getElementById('btnGaleri').classList.remove('hidden');
   } else if (state==='connecting') {
-    btn.classList.add('connecting');
-    txt.textContent = '...';
-    cB.classList.add('disabled');
-    cW.classList.add('disabled');
+    btn.classList.add('connecting'); txt.textContent = '...';
+    cB.classList.add('disabled'); cW.classList.add('disabled');
   } else {
-    txt.textContent = 'BLE';
-    cB.classList.add('disabled');
-    cW.classList.add('disabled');
+    txt.textContent = 'WiFi';
+    cB.classList.add('disabled'); cW.classList.add('disabled');
+    document.getElementById('btnGaleri').classList.add('hidden');
   }
+}
+
+async function kirimLED(cmd) {
+  if (!isConnected) return;
+  try {
+    const [pin, val] = cmd.split(':');
+    const param  = pin==='B' ? 'b' : 'w';
+    const val255 = Math.round(parseInt(val) / 4);
+    await fetch(ESP32_URL + '/led?' + param + '=' + val255, {mode:'cors', signal:AbortSignal.timeout(3000)});
+  } catch(e) { toast('LED gagal: '+e.message); }
+}
+
+function toggleLED(w) {
+  if (!isConnected) { toast('Sambungkan WiFi ESP32 dulu'); return; }
+  ledState[w] = !ledState[w];
+  document.getElementById(w==='B'?'cardBiru':'cardPutih').classList.toggle('on', ledState[w]);
+  kirimLED(w + ':' + (ledState[w] ? 1020 : 0));
+}
+// ── WiFi ESP32 Helper ──
+async function esp32Fetch(path, opts={}) {
+  const res = await fetch(ESP32_URL + path, {
+    ...opts,
+    mode: 'cors',
+    signal: AbortSignal.timeout(8000)
+  });
+  return res;
+}
+
+// ── Kirim foto ke SD Card via BLE (chunked) ──
+async function kirimFotoKeSD(blob, namaFile) {
+  if (!isConnected) { toast('WiFi ESP32 tidak terhubung'); return false; }
+  toast('📤 Upload ke SD card...');
+  try {
+    const resizedBlob = await resizeTo128(blob);
+    const form = new FormData();
+    form.append('foto', resizedBlob, namaFile);
+    form.append('nama', namaFile);
+    const res = await fetch(ESP32_URL + '/upload', {
+      method:'POST', body:form, mode:'cors',
+      signal:AbortSignal.timeout(15000)
+    });
+    if (res.ok) { toast('✓ Tersimpan di SD: ' + namaFile); return true; }
+    else { toast('Upload gagal: ' + res.status); return false; }
+  } catch(e) { toast('Upload error: ' + e.message); return false; }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Resize gambar ke 256×256 untuk kualitas lebih baik
+function resizeTo128(blob) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 256;
+      c.getContext('2d').drawImage(img, 0, 0, 256, 256);
+      URL.revokeObjectURL(url);
+      c.toBlob(resolve, 'image/jpeg', 0.85);
+    };
+    img.src = url;
+  });
+}
+
+// ── Galeri SD Card ──
+async function bukaGaleri() {
+  if (!isConnected) { toast('Sambungkan BLE dulu'); return; }
+  toast('Memuat daftar foto SD...');
+  galeriOpen = true;
+
+  try {
+    // Minta list foto
+    notifyCallback = null;
+    const listRaw = await bleRequest('LIST', 5000);
+    const listStr = listRaw.replace('LIST:', '');
+    sdFotoList = listStr.length > 0 ? listStr.split(',').filter(n=>n.length>0) : [];
+    tampilGaleri();
+  } catch(e) {
+    toast('Gagal muat galeri: ' + e.message);
+  }
+}
+
+// ── Cache thumbnail ──
+const thumbCache = {};
+let fotoModalNamaAktif = '';
+
+// ── Buka galeri ──
+async function bukaGaleri() {
+  if (!isConnected) { toast('Sambungkan BLE dulu'); return; }
+  const panel = document.getElementById('galeriPanel');
+  const grid  = document.getElementById('galeriGrid');
+  panel.classList.remove('hidden');
+
+  // Tampil loading
+  grid.innerHTML = `<div class="galeri-loading" style="grid-column:1/-1">
+    <div class="galeri-spinner"></div>
+    <span>Memuat dari SD card...</span>
+  </div>`;
+  document.getElementById('galeriStrip').textContent = 'Menghubungi ESP32...';
+
+  try {
+    const res  = await fetch(ESP32_URL + '/list', {mode:'cors', signal:AbortSignal.timeout(6000)});
+    const data = await res.json();
+    sdFotoList = data.map(f => f.nama);
+    tampilGaleri();
+  } catch(e) {
+    grid.innerHTML = `<div class="galeri-empty" style="grid-column:1/-1">
+      <div class="galeri-empty-icon">⚠️</div>
+      <div class="galeri-empty-text">Gagal memuat</div>
+      <div class="galeri-empty-sub">${e.message}</div>
+    </div>`;
+    document.getElementById('galeriStrip').textContent = 'Gagal terhubung ke SD card';
+  }
+}
+
+function tutupGaleri() {
+  document.getElementById('galeriPanel').classList.add('hidden');
+}
+
+// ── Tampil grid galeri ──
+function tampilGaleri() {
+  const grid = document.getElementById('galeriGrid');
+  const n = sdFotoList.length;
+  document.getElementById('galeriStrip').textContent =
+    n === 0 ? 'SD card kosong' : n + ' foto';
+
+  if (n === 0) {
+    grid.innerHTML = `<div class="galeri-empty">
+      <div class="galeri-empty-icon">📷</div>
+      <div class="galeri-empty-text">Belum ada foto</div>
+      <div class="galeri-empty-sub">Ambil foto kornea untuk mulai</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = sdFotoList.map(nama => `
+    <div class="galeri-thumb" id="thumb_${CSS.escape(nama)}"
+         onclick="lihatFoto('${nama}')">
+      <div class="thumb-loading-indicator"></div>
+      <span class="thumb-label">${nama.split('_').slice(-1)[0]?.replace('.jpg','') || nama}</span>
+    </div>`).join('');
+
+  // Load thumbnail satu per satu dengan delay agar tidak overflow BLE
+  sdFotoList.forEach((nama, i) => {
+    if (!thumbCache[nama]) {
+      setTimeout(() => loadThumb(nama), i * 800);
+    } else {
+      setThumb(nama, thumbCache[nama]);
+    }
+  });
+}
+
+// Set thumbnail ke grid
+function setThumb(nama, url) {
+  const el = document.getElementById('thumb_' + CSS.escape(nama));
+  if (!el) return;
+  const label = nama.split('_').slice(-1)[0]?.replace('.jpg','') || nama;
+  el.innerHTML = `
+    <img src="${url}" alt="${nama}" class="loaded"/>
+    <span class="thumb-label">${label}</span>`;
+}
+
+// Load thumbnail dari SD
+async function loadThumb(nama) {
+  if (!isConnected) return;
+  const url = await downloadFotoDariSD(nama);
+  if (url) {
+    thumbCache[nama] = url;
+    setThumb(nama, url);
+  }
+}
+
+// Download foto dari SD via WiFi HTTP
+async function downloadFotoDariSD(nama) {
+  try {
+    // Ambil foto langsung sebagai blob URL
+    const res = await fetch(ESP32_URL + '/foto?f=' + encodeURIComponent(nama), {
+      mode:'cors', signal:AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob); // return object URL
+  } catch(e) { return null; }
+}
+
+// ── Lihat foto fullscreen ──
+async function lihatFoto(nama) {
+  fotoModalNamaAktif = nama;
+  const modal   = document.getElementById('fotoModal');
+  const img     = document.getElementById('fotoModalImg');
+  const spinner = document.getElementById('fotoModalSpinner');
+  const title   = document.getElementById('fotoModalNama');
+
+  modal.classList.remove('hidden');
+  title.textContent = nama;
+  img.style.display = 'none';
+  spinner.style.display = 'block';
+
+  // Pakai cache kalau sudah ada
+  if (thumbCache[nama]) {
+    img.src = thumbCache[nama];
+    img.style.display = 'block';
+    spinner.style.display = 'none';
+    return;
+  }
+
+  // Download dari SD via WiFi
+  const url = await downloadFotoDariSD(nama);
+  if (url) {
+    thumbCache[nama] = url;
+    img.src = url;
+    img.style.display = 'block';
+    spinner.style.display = 'none';
+  } else {
+    spinner.style.display = 'none';
+    toast('Gagal memuat foto');
+  }
+}
+
+function tutupFotoModal() {
+  document.getElementById('fotoModal').classList.add('hidden');
+}
+
+// Hapus foto dari modal fullscreen
+async function hapusFotoModal() {
+  const nama = fotoModalNamaAktif;
+  if (!nama) return;
+  if (!confirm('Hapus foto ini?')) return;
+  await hapusFoto(nama);
+  tutupFotoModal();
+}
+
+// Simpan foto ke galeri HP
+function simpanFotoModal() {
+  const img  = document.getElementById('fotoModalImg');
+  const nama = fotoModalNamaAktif;
+  if (!img.src || !nama) { toast('Foto belum dimuat'); return; }
+
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    // iOS: share sheet
+    fetch(img.src).then(r => r.blob()).then(blob => {
+      const file = new File([blob], nama, {type:'image/jpeg'});
+      if (navigator.canShare && navigator.canShare({files:[file]})) {
+        navigator.share({files:[file], title:'ScanCornea'})
+          .then(() => toast('✓ Tersimpan!'))
+          .catch(e => { if(e.name!=='AbortError') toast('Gagal: '+e.message); });
+      }
+    });
+  } else {
+    // Android: download langsung
+    const a = document.createElement('a');
+    a.href = img.src; a.download = nama;
+    a.style.display = 'none';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => document.body.removeChild(a), 500);
+    toast('✓ Disimpan!');
+  }
+}
+
+// Bagikan foto
+function bagikanFotoModal() {
+  const img  = document.getElementById('fotoModalImg');
+  const nama = fotoModalNamaAktif;
+  if (!img.src || !nama) { toast('Foto belum dimuat'); return; }
+  fetch(img.src).then(r => r.blob()).then(blob => {
+    const file = new File([blob], nama, {type:'image/jpeg'});
+    if (navigator.share) {
+      navigator.share({files:[file], title:'ScanCornea - '+nama})
+        .catch(e => { if(e.name!=='AbortError') toast('Gagal bagikan'); });
+    } else {
+      toast('Share tidak didukung browser ini');
+    }
+  });
+}
+
+async function hapusFoto(nama) {
+  if (!confirm('Hapus ' + nama + '?')) return;
+  try {
+    const res = await fetch(ESP32_URL + '/del?f=' + encodeURIComponent(nama), {
+      mode:'cors', signal:AbortSignal.timeout(5000)
+    });
+    if (res.ok) {
+      toast('Foto dihapus');
+      sdFotoList = sdFotoList.filter(n => n !== nama);
+      if (thumbCache[nama]) { URL.revokeObjectURL(thumbCache[nama]); delete thumbCache[nama]; }
+      tampilGaleri();
+    } else toast('Gagal hapus');
+  } catch(e) { toast('Gagal hapus: ' + e.message); }
+}
+
+function tutupGaleri() {
+  document.getElementById('galeriPanel').classList.add('hidden');
+  galeriOpen = false;
 }
 
 async function kirimLED(cmd) {
@@ -607,5 +1211,54 @@ function toggleLED(w) {
   kirimLED(w + ':' + (ledState[w] ? 1023 : 0));
 }
 </script>
+<!-- ══ GALERI SD CARD ══ -->
+<div id="galeriPanel" class="hidden">
+  <!-- Status bar -->
+  <div class="galeri-statusbar">
+    <button class="galeri-back" onclick="tutupGaleri()">
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2L2 8l6 6"/></svg>
+      Kembali
+    </button>
+    <div class="galeri-title-bar">SD Card</div>
+    <button class="galeri-refresh" onclick="bukaGaleri()">↻</button>
+  </div>
+  <div class="galeri-strip" id="galeriStrip">Memuat...</div>
+  <!-- Grid foto -->
+  <div id="galeriGrid"></div>
+</div>
+
+<!-- ══ MODAL FULLSCREEN FOTO ══ -->
+<div id="fotoModal" class="hidden">
+  <div class="foto-modal-nav">
+    <button class="foto-modal-back" onclick="tutupFotoModal()">
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2L2 8l6 6"/></svg>
+      Galeri
+    </button>
+    <span class="foto-modal-name" id="fotoModalNama"></span>
+    <button class="foto-modal-del" onclick="hapusFotoModal()">Hapus</button>
+  </div>
+  <div class="foto-modal-viewer">
+    <div class="foto-modal-spinner" id="fotoModalSpinner"></div>
+    <img id="fotoModalImg" src="" alt="" style="display:none;"/>
+  </div>
+  <div class="foto-modal-bottom">
+    <button class="foto-modal-btn" onclick="simpanFotoModal()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span>Simpan</span>
+    </button>
+    <button class="foto-modal-btn" onclick="bagikanFotoModal()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+      <span>Bagikan</span>
+    </button>
+  </div>
+</div>
 </body>
 </html>
