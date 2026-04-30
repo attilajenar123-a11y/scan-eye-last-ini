@@ -457,7 +457,7 @@ canvas { display:none; }
     </div>
     <div class="crosshair-wrap"><div class="crosshair-ring"></div></div>
     <div class="flash-overlay" id="flashEl"></div>
-    <div class="ble-badge" id="bleBadge"><div class="ble-dot"></div><span id="bleText">BLE</span></div>
+    <div class="ble-badge" id="bleBadge"><div class="ble-dot"></div><span id="bleText">WiFi</span></div>
     <div class="zoom-badge" id="zoomBadge">1.0×</div>
     <div class="foto-counter" id="fotoCounter">Foto #1</div>
     <div class="upload-pill" id="uploadPill"></div>
@@ -496,8 +496,11 @@ canvas { display:none; }
     <!-- BLE Button -->
     <button class="ble-btn" id="btnBle" onclick="handleBle()">
       <div class="ble-btn-dot"></div>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="#666">
-        <path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+        <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <circle cx="12" cy="20" r="1" fill="#666" stroke="none"/>
       </svg>
     </button>
   </div>
@@ -508,9 +511,10 @@ canvas { display:none; }
 
 // ── Config ──
 // ── WiFi ESP32 Config ──
-// Ganti IP ini jika berbeda (cek Serial Monitor ESP32)
-let ESP32_IP   = '192.168.4.1';
-let ESP32_URL  = 'http://' + ESP32_IP;
+// GANTI IP INI sesuai Serial Monitor ESP32
+// Contoh: '192.168.1.105' atau 'scancornea.local'
+let ESP32_IP  = 'scancornea.local'; // ← GANTI INI
+let ESP32_URL = 'http://' + ESP32_IP;
 let wifiConnected = false;
 
 const DRIVE_URL = 'https://script.google.com/macros/s/AKfycby5KuXspaAEF9LDY9QEU5gcMRH_73H4px6pfkruq3zNdT7Tqy_I5orMzYRwv4ljszAg/exec';
@@ -866,20 +870,28 @@ async function handleBle() {
     toast('Terputus dari ESP32');
     return;
   }
+
+  // IP sudah di-set di konfigurasi atas
+
   setWifi('connecting');
   toast('Menghubungi ESP32...');
   try {
-    const res = await fetch(ESP32_URL + '/', {mode:'cors', signal:AbortSignal.timeout(5000)});
+    const res = await fetch(ESP32_URL + '/api/status', {
+      mode:'cors', signal:AbortSignal.timeout(6000)
+    });
     if (res.ok) {
       isConnected = true;
-      setWifi('on', 'ScanCornea-AP');
-      toast('✓ Terhubung ke ESP32 WiFi');
-    } else throw new Error('Status: ' + res.status);
+      const d = await res.json().catch(()=>({}));
+      const label = d.ip || ESP32_URL.replace('http://','');
+      setWifi('on', label);
+      toast('\u2713 Terhubung ke ESP32 (' + label + ')');
+    } else throw new Error('HTTP ' + res.status);
   } catch(e) {
     setWifi('off');
-    toast('Gagal — konek ke WiFi "ScanCornea-AP" dulu');
+    toast('Gagal konek ke ESP32: ' + e.message + ' — cek IP di Serial Monitor');
   }
 }
+
 
 function setWifi(state, name) {
   const btn  = document.getElementById('btnBle');
@@ -910,7 +922,7 @@ async function kirimLED(cmd) {
     const [pin, val] = cmd.split(':');
     const param  = pin==='B' ? 'b' : 'w';
     const val255 = Math.round(parseInt(val) / 4);
-    await fetch(ESP32_URL + '/led?' + param + '=' + val255, {mode:'cors', signal:AbortSignal.timeout(3000)});
+    await fetch(ESP32_URL + '/api/led?' + param + '=' + val255, {mode:'cors', signal:AbortSignal.timeout(3000)});
   } catch(e) { toast('LED gagal: '+e.message); }
 }
 
@@ -939,7 +951,7 @@ async function kirimFotoKeSD(blob, namaFile) {
     const form = new FormData();
     form.append('foto', resizedBlob, namaFile);
     form.append('nama', namaFile);
-    const res = await fetch(ESP32_URL + '/upload', {
+    const res = await fetch(ESP32_URL + '/api/upload', {
       method:'POST', body:form, mode:'cors',
       signal:AbortSignal.timeout(15000)
     });
@@ -1003,7 +1015,7 @@ async function bukaGaleri() {
   document.getElementById('galeriStrip').textContent = 'Menghubungi ESP32...';
 
   try {
-    const res  = await fetch(ESP32_URL + '/list', {mode:'cors', signal:AbortSignal.timeout(6000)});
+    const res  = await fetch(ESP32_URL + '/api/list', {mode:'cors', signal:AbortSignal.timeout(6000)});
     const data = await res.json();
     sdFotoList = data.map(f => f.nama);
     tampilGaleri();
@@ -1078,7 +1090,7 @@ async function loadThumb(nama) {
 async function downloadFotoDariSD(nama) {
   try {
     // Ambil foto langsung sebagai blob URL
-    const res = await fetch(ESP32_URL + '/foto?f=' + encodeURIComponent(nama), {
+    const res = await fetch(ESP32_URL + '/api/foto?f=' + encodeURIComponent(nama), {
       mode:'cors', signal:AbortSignal.timeout(10000)
     });
     if (!res.ok) return null;
@@ -1181,7 +1193,7 @@ function bagikanFotoModal() {
 async function hapusFoto(nama) {
   if (!confirm('Hapus ' + nama + '?')) return;
   try {
-    const res = await fetch(ESP32_URL + '/del?f=' + encodeURIComponent(nama), {
+    const res = await fetch(ESP32_URL + '/api/del?f=' + encodeURIComponent(nama), {
       mode:'cors', signal:AbortSignal.timeout(5000)
     });
     if (res.ok) {
