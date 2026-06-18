@@ -712,166 +712,75 @@ function toggleFilter() {
 }
 
 // ── OpenCV crop kornea ──
-// Metode: CLAHE + Threshold Binary Inverse + Morphological + Contour
-// Sama persis dengan eye_crop.py di Pi 5
-// Parameter bisa diubah sesuai kebutuhan:
-const CROP_PARAMS = {
-  DETECT_SIZE  : 640,   // ukuran resize sebelum proses (px) — lebih besar = lebih akurat
-  CLIP_LIMIT   : 3.0,   // CLAHE clipLimit — kecil=halus, besar=kontras ekstrem
-  TILE_SIZE    : 16,    // CLAHE tileGridSize — kecil=adaptif lokal, besar=mendekati global
-  THRESHOLD    : 60,    // threshold gelap — kecil=lebih banyak area gelap, besar=hanya sangat gelap
-  KERNEL_OPEN  : 8,     // kernel morphological opening — hapus noise kecil
-  KERNEL_CLOSE : 12,    // kernel morphological closing — tutup lubang
-  AREA_MIN     : 800,   // area minimum kontur iris (px² dalam DETECT_SIZE)
-  POS_MIN      : 0.05,  // batas kiri (5% dari lebar)
-  POS_MAX      : 0.95,  // batas kanan (95% dari lebar)
-  RASIO_MIN    : 0.20,  // rasio tinggi/lebar minimum iris
-  HALF_MULT    : 1.3,   // ukuran crop = ih * HALF_MULT
-  SHIFT_MULT   : 0.05,  // geser ke atas = ih * SHIFT_MULT
-  OUTPUT_SIZE  : 256,   // ukuran output akhir (sesuai input U-Net)
-  FALLBACK_R   : 0.35,  // fallback crop tengah 35% dari min(w,h)
-};
-
-const dCvs = document.createElement('canvas');
-const dCtx = dCvs.getContext('2d');
+const DETECT_SIZE=320;
+const dCvs=document.createElement('canvas');
+dCvs.width=dCvs.height=DETECT_SIZE;
+const dCtx=dCvs.getContext('2d');
 
 function cropKornea(srcCanvas) {
   return new Promise(resolve => {
-    const ctx = srcCanvas.getContext('2d');
-    const w = srcCanvas.width, h = srcCanvas.height;
-    const p = CROP_PARAMS;
-
-    if (cvReady && typeof cv !== 'undefined' && cv.Mat) {
+    const ctx=srcCanvas.getContext('2d');
+    const w=srcCanvas.width, h=srcCanvas.height;
+    if (cvReady && typeof cv!=='undefined' && cv.Mat) {
       try {
-        // ── [1] Resize ke DETECT_SIZE untuk proses lebih cepat ──
-        dCvs.width = dCvs.height = p.DETECT_SIZE;
-        dCtx.drawImage(srcCanvas, 0, 0, p.DETECT_SIZE, p.DETECT_SIZE);
-
-        // ── [2] Convert RGBA → Grayscale ──
-        const src  = cv.imread(dCvs);
-        const gray = new cv.Mat();
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-        // ── [3] CLAHE Enhancement ──
-        // Meningkatkan kontras lokal agar iris lebih kontras dari kulit
-        const clahe  = new cv.CLAHE(p.CLIP_LIMIT, new cv.Size(p.TILE_SIZE, p.TILE_SIZE));
-        const grayEq = new cv.Mat();
-        clahe.apply(gray, grayEq);
-
-        // ── [4] Threshold Binary Inverse ──
-        // Piksel gelap (iris/pupil) → putih, area terang → hitam
-        const mask = new cv.Mat();
-        cv.threshold(grayEq, mask, p.THRESHOLD, 255, cv.THRESH_BINARY_INV);
-
-        // ── [5] Morphological Operations ──
-        // Opening: hapus noise kecil (bintik kulit, bulu mata)
-        const k1       = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(p.KERNEL_OPEN, p.KERNEL_OPEN));
-        const maskOpen = new cv.Mat();
-        cv.morphologyEx(mask, maskOpen, cv.MORPH_OPEN, k1);
-
-        // Closing: tutup lubang kecil dalam iris (refleksi cahaya)
-        const k2         = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(p.KERNEL_CLOSE, p.KERNEL_CLOSE));
-        const maskClean  = new cv.Mat();
-        cv.morphologyEx(maskOpen, maskClean, cv.MORPH_CLOSE, k2);
-
-        // ── [6] Contour Detection ──
-        const contours = new cv.MatVector();
-        const hier     = new cv.Mat();
-        cv.findContours(maskClean, contours, hier, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        // ── [7] Filter & Seleksi Kontur ──
-        // Ambil kontur terbesar yang memenuhi syarat = iris
-        let bestArea = 0, bestRect = null;
-        for (let i = 0; i < contours.size(); i++) {
-          const cnt  = contours.get(i);
-          const area = cv.contourArea(cnt);
-          // Filter area minimum
-          if (area < p.AREA_MIN) continue;
-          const rect = cv.boundingRect(cnt);
-          // Filter posisi — jangan yang di pinggir
-          if (rect.x < p.DETECT_SIZE * p.POS_MIN) continue;
-          if (rect.x + rect.width > p.DETECT_SIZE * p.POS_MAX) continue;
-          // Filter rasio tinggi/lebar — iris tidak terlalu tipis
-          if (rect.height < rect.width * p.RASIO_MIN) continue;
-          if (area > bestArea) { bestArea = area; bestRect = rect; }
+        dCvs.width=DETECT_SIZE; dCvs.height=DETECT_SIZE;
+        dCtx.drawImage(srcCanvas,0,0,DETECT_SIZE,DETECT_SIZE);
+        const src=cv.imread(dCvs), gray=new cv.Mat(), blur=new cv.Mat(), edges=new cv.Mat();
+        cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+        cv.bilateralFilter(gray,blur,11,17,17);
+        cv.Canny(blur,edges,30,200);
+        const k=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(3,3));
+        cv.dilate(edges,edges,k);
+        const contours=new cv.MatVector(), hier=new cv.Mat();
+        cv.findContours(edges,contours,hier,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE);
+        const cx0=DETECT_SIZE/2, cy0=DETECT_SIZE/2;
+        let best=null, bestScore=-1;
+        for (let i=0;i<contours.size();i++) {
+          const cnt=contours.get(i), area=cv.contourArea(cnt);
+          const minA=Math.PI*Math.pow(DETECT_SIZE*0.18,2), maxA=Math.PI*Math.pow(DETECT_SIZE*0.54,2);
+          if (area<minA||area>maxA) continue;
+          const peri=cv.arcLength(cnt,true);
+          if (peri===0) continue;
+          const circ=4*Math.PI*area/(peri*peri);
+          if (circ<0.45) continue;
+          const M=cv.moments(cnt);
+          if (M.m00===0) continue;
+          const cx=M.m10/M.m00, cy=M.m01/M.m00;
+          const dist=Math.hypot(cx-cx0,cy-cy0);
+          if (dist>DETECT_SIZE*0.28) continue;
+          const score=area*circ/(1+dist*0.5);
+          if (score>bestScore) { bestScore=score; best={cnt,cx,cy}; }
         }
-
-        // Cleanup OpenCV objects
-        src.delete(); gray.delete(); grayEq.delete(); mask.delete();
-        maskOpen.delete(); maskClean.delete(); k1.delete(); k2.delete();
-        contours.delete(); hier.delete(); clahe.delete();
-
-        if (bestRect) {
-          // ── [8] Hitung koordinat crop ──
-          // Scale balik ke ukuran foto asli
-          const sx = w / p.DETECT_SIZE;
-          const sy = h / p.DETECT_SIZE;
-
-          const ix = bestRect.x * sx;
-          const iy = bestRect.y * sy;
-          const iw = bestRect.width  * sx;
-          const ih = bestRect.height * sy;
-
-          // Crop persegi berdasarkan tinggi iris
-          const half    = ih * p.HALF_MULT;
-          const shift   = ih * p.SHIFT_MULT;
-          const cx_iris = ix + iw / 2;
-          const cy_iris = iy + ih / 2;
-
-          let x1 = Math.max(0, cx_iris - half);
-          let y1 = Math.max(0, cy_iris - half - shift);
-          let x2 = Math.min(w, cx_iris + half);
-          let y2 = Math.min(h, cy_iris + half - shift);
-
-          // Buat persegi
-          const side = Math.min(x2 - x1, y2 - y1);
-          x2 = x1 + side;
-          y2 = y1 + side;
-          if (x2 > w) { x1 -= (x2 - w); x2 = w; }
-          if (y2 > h) { y1 -= (y2 - h); y2 = h; }
-          x1 = Math.max(0, x1); y1 = Math.max(0, y1);
-
-          const ew = Math.round(x2 - x1);
-          const eh = Math.round(y2 - y1);
-
-          if (ew > 0 && eh > 0) {
-            const crop = ctx.getImageData(Math.round(x1), Math.round(y1), ew, eh);
-            const tmp  = document.createElement('canvas');
-            tmp.width = ew; tmp.height = eh;
-            tmp.getContext('2d').putImageData(crop, 0, 0);
-
-            const out = document.createElement('canvas');
-            out.width = out.height = p.OUTPUT_SIZE;
-            out.getContext('2d').drawImage(tmp, 0, 0, ew, eh, 0, 0, p.OUTPUT_SIZE, p.OUTPUT_SIZE);
-
-            resolve({ canvas: out, cropped: true, method: 'clahe_threshold' });
-            return;
-          }
+        if (best) {
+          const circle=cv.minEnclosingCircle(best.cnt);
+          const sx=w/DETECT_SIZE, sy=h/DETECT_SIZE;
+          const rcx=circle.center.x*sx, rcy=circle.center.y*sy;
+          const rr=circle.radius*Math.max(sx,sy);
+          const pad=rr*0.10, side=(rr+pad)*2;
+          const ex=Math.max(0,Math.round(rcx-rr-pad)), ey=Math.max(0,Math.round(rcy-rr-pad));
+          const ew=Math.min(Math.round(side),w-ex), eh=Math.min(Math.round(side),h-ey);
+          const crop=ctx.getImageData(ex,ey,ew,eh);
+          const out=document.createElement('canvas'); out.width=out.height=512;
+          const t=document.createElement('canvas'); t.width=ew; t.height=eh;
+          t.getContext('2d').putImageData(crop,0,0);
+          out.getContext('2d').drawImage(t,0,0,ew,eh,0,0,512,512);
+          src.delete();gray.delete();blur.delete();edges.delete();k.delete();contours.delete();hier.delete();
+          resolve({canvas:out,cropped:true});
+          return;
         }
-      } catch(e) {
-        console.warn('[cropKornea] OpenCV error:', e);
-      }
+        src.delete();gray.delete();blur.delete();edges.delete();k.delete();contours.delete();hier.delete();
+      } catch(e) {}
     }
-
-    // ── Fallback: crop tengah foto ──
-    // Dipakai kalau OpenCV belum siap atau iris tidak terdeteksi
-    const r    = Math.min(w, h) * p.FALLBACK_R;
-    const half = r * p.HALF_MULT;
-    const ex   = Math.max(0, Math.round(w / 2 - half));
-    const ey   = Math.max(0, Math.round(h / 2 - half));
-    const ew   = Math.min(Math.round(half * 2), w - ex);
-    const eh   = Math.min(Math.round(half * 2), h - ey);
-
-    const crop = ctx.getImageData(ex, ey, ew, eh);
-    const tmp  = document.createElement('canvas');
-    tmp.width = ew; tmp.height = eh;
-    tmp.getContext('2d').putImageData(crop, 0, 0);
-
-    const out = document.createElement('canvas');
-    out.width = out.height = p.OUTPUT_SIZE;
-    out.getContext('2d').drawImage(tmp, 0, 0, ew, eh, 0, 0, p.OUTPUT_SIZE, p.OUTPUT_SIZE);
-
-    resolve({ canvas: out, cropped: false, method: 'fallback_center' });
+    // Fallback
+    const r=Math.min(w,h)*0.38, pad=r*0.10, side=(r+pad)*2;
+    const ex=Math.max(0,Math.round(w/2-r-pad)), ey=Math.max(0,Math.round(h*0.47-r-pad));
+    const ew=Math.min(Math.round(side),w-ex), eh=Math.min(Math.round(side),h-ey);
+    const crop=ctx.getImageData(ex,ey,ew,eh);
+    const out=document.createElement('canvas'); out.width=out.height=512;
+    const t=document.createElement('canvas'); t.width=ew; t.height=eh;
+    t.getContext('2d').putImageData(crop,0,0);
+    out.getContext('2d').drawImage(t,0,0,ew,eh,0,0,512,512);
+    resolve({canvas:out,cropped:false});
   });
 }
 
