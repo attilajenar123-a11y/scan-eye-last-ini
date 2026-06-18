@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ScanCornea</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 :root { --blue:#5ab4f0; --green:#0a9e6e; --gray:#d8dce2; --bottom-h:180px; }
@@ -466,9 +465,7 @@ canvas { display:none; }
     <div class="zoom-badge" id="zoomBadge">1.0×</div>
     <div class="foto-counter" id="fotoCounter">Foto #1</div>
     <div class="upload-pill" id="uploadPill"></div>
-    <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">
-      <div class="filter-dot"></div><span id="filterLabel">Filter</span>
-    </button>
+    
     <button class="btn-galeri hidden" id="btnGaleri" onclick="bukaGaleri()">📁 SD Card</button>
   </div>
 
@@ -525,9 +522,6 @@ canvas { display:none; }
 'use strict';
 
 // ── OpenCV callbacks (harus di atas) ──
-function onOpenCvReady() { cvReady = true; }
-function onOpenCvError() { cvReady = false; }
-
 // ── BLE Config ──
 const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
 const CHAR_UUID    = '12345678-1234-5678-1234-56789abcdef1';
@@ -541,11 +535,9 @@ let ledState={B:false,W:false};
 let sdFotoList=[], galeriOpen=false;
 let notifyCallback=null;
 let kameraAktif=false, scale=1, p0dist=0, p0scale=1;
-let filterOn=false;
 let fotoCounter=1;
 let mataPasien='OD';
 let pendingBlob=null;
-let cvReady=false;
 let toastTimer;
 
 const vid     = document.getElementById('vid');
@@ -703,86 +695,8 @@ camWrap.addEventListener('touchend', e => {
   lastTap=now;
 });
 
-// ── Filter ──
-function toggleFilter() {
-  filterOn=!filterOn;
-  vid.classList.toggle('filter-on', filterOn);
-  document.getElementById('filterBtn').classList.toggle('on', filterOn);
-  document.getElementById('filterLabel').textContent = filterOn?'Filter ON':'Filter';
-}
-
 // ── OpenCV crop kornea ──
-const DETECT_SIZE=320;
-const dCvs=document.createElement('canvas');
-dCvs.width=dCvs.height=DETECT_SIZE;
-const dCtx=dCvs.getContext('2d');
 
-function cropKornea(srcCanvas) {
-  return new Promise(resolve => {
-    const ctx=srcCanvas.getContext('2d');
-    const w=srcCanvas.width, h=srcCanvas.height;
-    if (cvReady && typeof cv!=='undefined' && cv.Mat) {
-      try {
-        dCvs.width=DETECT_SIZE; dCvs.height=DETECT_SIZE;
-        dCtx.drawImage(srcCanvas,0,0,DETECT_SIZE,DETECT_SIZE);
-        const src=cv.imread(dCvs), gray=new cv.Mat(), blur=new cv.Mat(), edges=new cv.Mat();
-        cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
-        cv.bilateralFilter(gray,blur,11,17,17);
-        cv.Canny(blur,edges,30,200);
-        const k=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(3,3));
-        cv.dilate(edges,edges,k);
-        const contours=new cv.MatVector(), hier=new cv.Mat();
-        cv.findContours(edges,contours,hier,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE);
-        const cx0=DETECT_SIZE/2, cy0=DETECT_SIZE/2;
-        let best=null, bestScore=-1;
-        for (let i=0;i<contours.size();i++) {
-          const cnt=contours.get(i), area=cv.contourArea(cnt);
-          const minA=Math.PI*Math.pow(DETECT_SIZE*0.18,2), maxA=Math.PI*Math.pow(DETECT_SIZE*0.54,2);
-          if (area<minA||area>maxA) continue;
-          const peri=cv.arcLength(cnt,true);
-          if (peri===0) continue;
-          const circ=4*Math.PI*area/(peri*peri);
-          if (circ<0.45) continue;
-          const M=cv.moments(cnt);
-          if (M.m00===0) continue;
-          const cx=M.m10/M.m00, cy=M.m01/M.m00;
-          const dist=Math.hypot(cx-cx0,cy-cy0);
-          if (dist>DETECT_SIZE*0.28) continue;
-          const score=area*circ/(1+dist*0.5);
-          if (score>bestScore) { bestScore=score; best={cnt,cx,cy}; }
-        }
-        if (best) {
-          const circle=cv.minEnclosingCircle(best.cnt);
-          const sx=w/DETECT_SIZE, sy=h/DETECT_SIZE;
-          const rcx=circle.center.x*sx, rcy=circle.center.y*sy;
-          const rr=circle.radius*Math.max(sx,sy);
-          const pad=rr*0.10, side=(rr+pad)*2;
-          const ex=Math.max(0,Math.round(rcx-rr-pad)), ey=Math.max(0,Math.round(rcy-rr-pad));
-          const ew=Math.min(Math.round(side),w-ex), eh=Math.min(Math.round(side),h-ey);
-          const crop=ctx.getImageData(ex,ey,ew,eh);
-          const out=document.createElement('canvas'); out.width=out.height=512;
-          const t=document.createElement('canvas'); t.width=ew; t.height=eh;
-          t.getContext('2d').putImageData(crop,0,0);
-          out.getContext('2d').drawImage(t,0,0,ew,eh,0,0,512,512);
-          src.delete();gray.delete();blur.delete();edges.delete();k.delete();contours.delete();hier.delete();
-          resolve({canvas:out,cropped:true});
-          return;
-        }
-        src.delete();gray.delete();blur.delete();edges.delete();k.delete();contours.delete();hier.delete();
-      } catch(e) {}
-    }
-    // Fallback
-    const r=Math.min(w,h)*0.38, pad=r*0.10, side=(r+pad)*2;
-    const ex=Math.max(0,Math.round(w/2-r-pad)), ey=Math.max(0,Math.round(h*0.47-r-pad));
-    const ew=Math.min(Math.round(side),w-ex), eh=Math.min(Math.round(side),h-ey);
-    const crop=ctx.getImageData(ex,ey,ew,eh);
-    const out=document.createElement('canvas'); out.width=out.height=512;
-    const t=document.createElement('canvas'); t.width=ew; t.height=eh;
-    t.getContext('2d').putImageData(crop,0,0);
-    out.getContext('2d').drawImage(t,0,0,ew,eh,0,0,512,512);
-    resolve({canvas:out,cropped:false});
-  });
-}
 
 // ── Jepret ──
 async function jepret() {
@@ -793,6 +707,7 @@ async function jepret() {
   flash.classList.add('flash');
   setTimeout(()=>flash.classList.remove('flash'),150);
 
+  // Ambil foto langsung dari kamera tanpa pemrosesan apapun
   const canvas=document.getElementById('cvs');
   const ctx=canvas.getContext('2d');
   const vw=vid.videoWidth, vh=vid.videoHeight;
@@ -800,24 +715,9 @@ async function jepret() {
   canvas.width=vw; canvas.height=vh;
   ctx.drawImage(vid,(vw-cw)/2,(vh-ch)/2,cw,ch,0,0,vw,vh);
 
-  if (filterOn) {
-    const d=ctx.getImageData(0,0,vw,vh);
-    for (let i=0;i<d.data.length;i+=4) {
-      const r=d.data[i],g=d.data[i+1];
-      const lum=0.299*r+0.587*g+0.114*d.data[i+2];
-      d.data[i]=Math.min(255,r+lum*0.05);
-      d.data[i+1]=Math.min(255,g+lum*0.03);
-      d.data[i+2]=0;
-    }
-    ctx.putImageData(d,0,0);
-  }
-
-  try {
-    const {canvas:outCanvas,cropped} = await cropKornea(canvas);
-    outCanvas.toBlob(blob => {
-      bukaModal(blob, cropped?'✓ Kornea terdeteksi':'Foto penuh');
-    }, 'image/jpeg', 0.92);
-  } catch(e) { toast('Error: '+e.message); }
+  canvas.toBlob(blob => {
+    bukaModal(blob, 'Foto berhasil diambil');
+  }, 'image/jpeg', 0.92);
 
   vid.play();
   btn.disabled=false;
